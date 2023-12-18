@@ -20,12 +20,12 @@ endif()
 
 set(PROJECT_SOURCES
         main.cpp
-        mainwindow.cpp
-        mainwindow.h
-        mainwindow.ui
+        main_window.h main_window.cpp
         fluid_grid.cpp
         fluid_grid_widget.h
         fluid_grid_widget.cpp
+        fluid_grid.h
+        fluid_generator_thread.h fluid_generator_thread.cpp
 )
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
@@ -33,7 +33,6 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 qt_add_executable(FluidSim
     MANUAL_FINALIZATION
     ${PROJECT_SOURCES}
-    fluid_grid.h
 )
 
 target_link_libraries(FluidSim PRIVATE
