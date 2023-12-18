@@ -1,5 +1,7 @@
 #include "fluid_generator_thread.h"
 
+#include <QThread>
+
 FluidGeneratorThread::FluidGeneratorThread(QObject *parent)
     : QThread{parent}
 {
@@ -12,7 +14,7 @@ void FluidGeneratorThread::run() {
         // Generate data
         std::vector<uint8_t> newData = UpdateSimulation();
         emit SceneUpdated(newData);
-        QThread::msleep(33); // Delay for 30fps
+        QThread::msleep(10);
     }
 }
 

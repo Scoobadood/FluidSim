@@ -19,6 +19,7 @@ public:
 private slots:
     void ToggleSceneGeneration();
     void UpdateScene(const std::vector<uint8_t> & new_data);
+    void UpdateUI();
 
 private:
     QGraphicsView* graphics_view_;

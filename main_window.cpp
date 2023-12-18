@@ -3,6 +3,7 @@
 #include <QGraphicsView>
 #include <QPushButton>
 #include <QHBoxLayout>
+#include <QTimer>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -24,6 +25,28 @@ MainWindow::MainWindow(QWidget *parent)
     connect(&fluid_generator_thread_, &FluidGeneratorThread::SceneUpdated, this, &MainWindow::UpdateScene);
     connect(btn_pause_resume_, &QPushButton::clicked, this, &MainWindow::ToggleSceneGeneration);
 
+    fluid_generator_thread_.start();
+
+    // Set timer to update UI.
+    auto uiUpdateTimer = new QTimer(this);
+    connect(uiUpdateTimer, &QTimer::timeout, this, &MainWindow::UpdateUI);
+    uiUpdateTimer->start(33); // 30fps (1000ms / 30fps)
+}
+
+void MainWindow::UpdateUI() {
+    // Lock the mutex to access the data
+    QMutexLocker locker(&scene_image_mutex_);
+
+    // Update the QGraphicsView with the latest data
+    // For example:
+    // scene_image_ contains the latest data from the generator
+    // QGraphicsPixmapItem* pixmapItem = new QGraphicsPixmapItem(QPixmap::fromImage(scene_image_));
+    // scene->clear();
+    // scene->addItem(pixmapItem);
+
+    locker.unlock();
+
+    // Perform any other UI updates as needed
 }
 
 void MainWindow::UpdateScene(const std::vector<uint8_t> & new_data) {
@@ -31,6 +54,7 @@ void MainWindow::UpdateScene(const std::vector<uint8_t> & new_data) {
     QMutexLocker locker(&scene_image_mutex_);
 
     // Update scene_image_
+    scene_image_.loadFromData(reinterpret_cast<const uchar*>(new_data.data()), new_data.size());
 
     locker.unlock();
 
@@ -59,10 +83,10 @@ MainWindow::~MainWindow()
         fluid_generator_thread_.wait();
     }
     disconnect(btn_pause_resume_);
-    disconnect(&fluid_generator_thread_);
 
     centralWidget()->layout()->removeWidget(btn_pause_resume_);
     centralWidget()->layout()->removeWidget(graphics_view_);
+    delete centralWidget()->layout();
     delete graphics_view_;
     delete btn_pause_resume_;
 }
