@@ -1,6 +1,8 @@
 #ifndef FLUIDGENERATORTHREAD_H
 #define FLUIDGENERATORTHREAD_H
 
+#include "fluid_sim_grid.h"
+
 #include <QThread>
 
 class FluidGeneratorThread : public QThread
@@ -16,7 +18,7 @@ protected:
     void run() override;
 
 private:
-    std::vector<uint8_t> UpdateSimulation();
+    FluidGridSimulator *fluid_grid_sim_;
 };
 
 #endif // FLUIDGENERATORTHREAD_H

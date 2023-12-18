@@ -5,19 +5,15 @@
 FluidGeneratorThread::FluidGeneratorThread(QObject *parent)
     : QThread{parent}
 {
-
+    fluid_grid_sim_ = new FluidGridSimulator(200, 200);
 }
 
 
 void FluidGeneratorThread::run() {
     while (!isInterruptionRequested()) {
         // Generate data
-        std::vector<uint8_t> newData = UpdateSimulation();
-        emit SceneUpdated(newData);
-        QThread::msleep(10);
+        fluid_grid_sim_->Simulate();
+        emit SceneUpdated(fluid_grid_sim_->Data());
+        QThread::msleep(5);
     }
-}
-
-std::vector<uint8_t> FluidGeneratorThread::UpdateSimulation() {
-    return {};
 }

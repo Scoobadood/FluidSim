@@ -21,10 +21,10 @@ endif()
 set(PROJECT_SOURCES
         main.cpp
         main_window.h main_window.cpp
-        fluid_grid.cpp
-        fluid_grid_widget.h
-        fluid_grid_widget.cpp
-        fluid_grid.h
+        fluid_sim_grid.cpp
+
+
+        fluid_sim_grid.h
         fluid_generator_thread.h fluid_generator_thread.cpp
 )
 

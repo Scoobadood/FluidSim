@@ -1,25 +1,42 @@
 #include "main_window.h"
 
+#include <QGraphicsPixmapItem>
 #include <QGraphicsView>
-#include <QPushButton>
 #include <QHBoxLayout>
+#include <QPushButton>
 #include <QTimer>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
     // Initialize the UI components
-    graphics_view_ = new QGraphicsView(this);
-    btn_pause_resume_ = new QPushButton("Pause", this);
-
-    auto centralWidget = new QWidget(this);
-
+    auto central_widget = new QWidget(this);
     auto layout = new QHBoxLayout();
-    layout->addWidget(graphics_view_);
-    layout->addWidget(btn_pause_resume_);
+    central_widget->setLayout(layout);
+    setCentralWidget(central_widget);
 
-    centralWidget->setLayout(layout);
-    setCentralWidget(centralWidget);
+    // Graphics
+    graphics_view_ = new QGraphicsView(this);
+    scene_ = new QGraphicsScene(0, 0, 200, 200, this); // Create a QGraphicsScene
+    graphics_view_->setScene(scene_);
+    QSizePolicy size_policy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    size_policy.setVerticalStretch(1);
+    size_policy.setHorizontalStretch(1);
+    graphics_view_->setSizePolicy(size_policy);
+    layout->addWidget(graphics_view_);
+
+    // Button
+    btn_pause_resume_ = new QPushButton("Resume", this);
+    size_policy.setHorizontalPolicy(QSizePolicy::Fixed);
+    size_policy.setVerticalPolicy(QSizePolicy::Fixed);
+    btn_pause_resume_->setSizePolicy(size_policy);
+    int preferred_width = btn_pause_resume_->sizeHint().width();
+    btn_pause_resume_->setFixedWidth(preferred_width);
+    btn_pause_resume_->setText("Pause");
+    layout->addWidget(btn_pause_resume_, 0, Qt::AlignTop);
+
+    // Allocate image
+    scene_image_ = new QImage(200, 200, QImage::Format_Grayscale8);
 
     // Connect signals and slots for scene updates
     connect(&fluid_generator_thread_, &FluidGeneratorThread::SceneUpdated, this, &MainWindow::UpdateScene);
@@ -40,9 +57,9 @@ void MainWindow::UpdateUI() {
     // Update the QGraphicsView with the latest data
     // For example:
     // scene_image_ contains the latest data from the generator
-    // QGraphicsPixmapItem* pixmapItem = new QGraphicsPixmapItem(QPixmap::fromImage(scene_image_));
-    // scene->clear();
-    // scene->addItem(pixmapItem);
+    QGraphicsPixmapItem *pixmapItem = new QGraphicsPixmapItem(QPixmap::fromImage(*scene_image_));
+    scene_->clear();
+    scene_->addItem(pixmapItem);
 
     locker.unlock();
 
@@ -54,7 +71,8 @@ void MainWindow::UpdateScene(const std::vector<uint8_t> & new_data) {
     QMutexLocker locker(&scene_image_mutex_);
 
     // Update scene_image_
-    scene_image_.loadFromData(reinterpret_cast<const uchar*>(new_data.data()), new_data.size());
+    uint8_t *pixel_data = reinterpret_cast<uint8_t *>(scene_image_->bits());
+    memcpy(pixel_data, new_data.data(), new_data.size());
 
     locker.unlock();
 

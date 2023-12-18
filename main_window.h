@@ -23,8 +23,9 @@ private slots:
 
 private:
     QGraphicsView* graphics_view_;
+    QGraphicsScene *scene_;
     QPushButton* btn_pause_resume_;
-    QImage scene_image_;
+    QImage *scene_image_;
     QMutex scene_image_mutex_;
     FluidGeneratorThread fluid_generator_thread_;
 };
