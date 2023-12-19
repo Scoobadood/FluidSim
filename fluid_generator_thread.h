@@ -9,7 +9,7 @@ class FluidGeneratorThread : public QThread
 {
     Q_OBJECT
 public:
-    explicit FluidGeneratorThread(QObject *parent = nullptr);
+    explicit FluidGeneratorThread(uint32_t w, uint32_t h, QObject *parent = nullptr);
 
 signals:
     void SceneUpdated(const std::vector<uint8_t>& data);

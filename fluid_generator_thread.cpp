@@ -2,18 +2,19 @@
 
 #include <QThread>
 
-FluidGeneratorThread::FluidGeneratorThread(QObject *parent)
+FluidGeneratorThread::FluidGeneratorThread(uint32_t w, uint32_t h, QObject *parent)
     : QThread{parent}
 {
-    fluid_grid_sim_ = new FluidGridSimulator(200, 200);
+    fluid_grid_sim_ = new FluidGridSimulator(w, h);
 }
 
-
-void FluidGeneratorThread::run() {
+void FluidGeneratorThread::run()
+{
+    emit SceneUpdated(fluid_grid_sim_->Data());
     while (!isInterruptionRequested()) {
         // Generate data
         fluid_grid_sim_->Simulate();
         emit SceneUpdated(fluid_grid_sim_->Data());
-        QThread::msleep(5);
+        QThread::msleep(1);
     }
 }

@@ -6,6 +6,9 @@
 #include <QPushButton>
 #include <QTimer>
 
+const uint32_t WIDTH = 200;
+const uint32_t HEIGHT = 200;
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
@@ -17,7 +20,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     // Graphics
     graphics_view_ = new QGraphicsView(this);
-    scene_ = new QGraphicsScene(0, 0, 200, 200, this); // Create a QGraphicsScene
+    scene_ = new QGraphicsScene(0, 0, WIDTH, HEIGHT, this); // Create a QGraphicsScene
     graphics_view_->setScene(scene_);
     QSizePolicy size_policy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     size_policy.setVerticalStretch(1);
@@ -36,13 +39,17 @@ MainWindow::MainWindow(QWidget *parent)
     layout->addWidget(btn_pause_resume_, 0, Qt::AlignTop);
 
     // Allocate image
-    scene_image_ = new QImage(200, 200, QImage::Format_Grayscale8);
+    scene_image_ = new QImage(WIDTH, HEIGHT, QImage::Format_Grayscale8);
 
     // Connect signals and slots for scene updates
-    connect(&fluid_generator_thread_, &FluidGeneratorThread::SceneUpdated, this, &MainWindow::UpdateScene);
+    fluid_generator_thread_ = new FluidGeneratorThread(WIDTH, HEIGHT);
+    connect(fluid_generator_thread_,
+            &FluidGeneratorThread::SceneUpdated,
+            this,
+            &MainWindow::UpdateScene);
     connect(btn_pause_resume_, &QPushButton::clicked, this, &MainWindow::ToggleSceneGeneration);
 
-    fluid_generator_thread_.start();
+    fluid_generator_thread_->start();
 
     // Set timer to update UI.
     auto uiUpdateTimer = new QTimer(this);
@@ -58,6 +65,7 @@ void MainWindow::UpdateUI() {
     // For example:
     // scene_image_ contains the latest data from the generator
     QGraphicsPixmapItem *pixmapItem = new QGraphicsPixmapItem(QPixmap::fromImage(*scene_image_));
+    //    pixmapItem->setScale(50.0f);
     scene_->clear();
     scene_->addItem(pixmapItem);
 
@@ -81,14 +89,14 @@ void MainWindow::UpdateScene(const std::vector<uint8_t> & new_data) {
 }
 
 void MainWindow::ToggleSceneGeneration() {
-    if (fluid_generator_thread_.isRunning()) {
+    if (fluid_generator_thread_->isRunning()) {
         // Pause data generation
-        fluid_generator_thread_.requestInterruption();
-        fluid_generator_thread_.wait();
+        fluid_generator_thread_->requestInterruption();
+        fluid_generator_thread_->wait();
         btn_pause_resume_->setText("Resume");
     } else {
         // Resume data generation
-        fluid_generator_thread_.start();
+        fluid_generator_thread_->start();
         btn_pause_resume_->setText("Pause");
     }
 }
@@ -96,9 +104,9 @@ void MainWindow::ToggleSceneGeneration() {
 MainWindow::~MainWindow()
 {
     // Stop and clean up the data generation thread
-    if (fluid_generator_thread_.isRunning()) {
-        fluid_generator_thread_.requestInterruption();
-        fluid_generator_thread_.wait();
+    if (fluid_generator_thread_->isRunning()) {
+        fluid_generator_thread_->requestInterruption();
+        fluid_generator_thread_->wait();
     }
     disconnect(btn_pause_resume_);
 
@@ -107,5 +115,6 @@ MainWindow::~MainWindow()
     delete centralWidget()->layout();
     delete graphics_view_;
     delete btn_pause_resume_;
+    delete fluid_generator_thread_;
 }
 
