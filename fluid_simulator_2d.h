@@ -13,6 +13,7 @@ public:
     virtual const std::vector<float>& Density() const;
     virtual const std::vector<float>& VelocityX() const;
     virtual const std::vector<float>& VelocityY() const;
+    virtual void AddDensity(uint32_t x, uint32_t y, float amount);
 
 protected:
     virtual const inline uint32_t Index(uint32_t x, uint32_t y) const { return y * dim_x_ + x; };

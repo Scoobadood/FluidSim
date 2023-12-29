@@ -41,3 +41,8 @@ const std::vector<float>& FluidSimulator2D::VelocityY() const
 {
     return velocity_y_;
 }
+
+void FluidSimulator2D::AddDensity(uint32_t x, uint32_t y, float amount)
+{
+    density_.at(Index(x, y)) += amount;
+}

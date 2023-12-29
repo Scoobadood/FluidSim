@@ -16,7 +16,7 @@ MainWindow::MainWindow(QWidget *parent)
     dock->setWidget(control_panel);
     addDockWidget(Qt::TopDockWidgetArea, dock);
 
-    fluid_sim_ = new GridFluidSimulator(50, 50, 1.0f / 60.0f, 0.8f);
+    fluid_sim_ = new GridFluidSimulator(64, 64, 1.0f / 60.0f, 0.8f);
 
     // Add some central content to the main window
     display_ = new FluidDisplayWidget(this);
@@ -34,6 +34,7 @@ MainWindow::MainWindow(QWidget *parent)
         display_->ShowVelocityField(show);
         StepSim();
     });
+    connect(display_, &FluidDisplayWidget::RightClick, this, &MainWindow::HandleRightClick);
 }
 
 void MainWindow::StepSim()
@@ -75,4 +76,11 @@ void MainWindow::StopSim()
 
     sim_thread_->requestInterruption();
     sim_thread_->wait();
+}
+
+void MainWindow::HandleRightClick(float px, float py)
+{
+    auto x = (uint32_t) std::round(px * fluid_sim_->DimX());
+    auto y = (uint32_t) std::round(py * fluid_sim_->DimY());
+    fluid_sim_->AddDensity(x, y, 0.5f);
 }

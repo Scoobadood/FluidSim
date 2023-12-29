@@ -14,6 +14,10 @@ class FluidDisplayWidget : public QWidget
 public:
     FluidDisplayWidget(QWidget *parent = nullptr);
     ~FluidDisplayWidget();
+    void mousePressEvent(QMouseEvent *event) override;
+
+signals:
+    void RightClick(float px, float py);
 
 public slots:
     void SimulatorUpdated(const FluidSimulator2D *simulator);

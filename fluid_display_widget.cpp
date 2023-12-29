@@ -7,9 +7,10 @@
 #include <QPainter>
 #include <QPushButton>
 #include <QTimer>
+#include <iostream>
 
-const uint32_t HEIGHT = 1024;
-const uint32_t WIDTH = 1024;
+const uint32_t HEIGHT = 512;
+const uint32_t WIDTH = 512;
 
 FluidDisplayWidget::FluidDisplayWidget(QWidget *parent)
     : QWidget(parent)       //
@@ -25,7 +26,6 @@ FluidDisplayWidget::FluidDisplayWidget(QWidget *parent)
 
     view_ = new QGraphicsView(this);
     view_->setRenderHint(QPainter::Antialiasing);
-    view_->setRenderHint(QPainter::SmoothPixmapTransform);
 
     scene_ = new QGraphicsScene(view_);
     view_->setScene(scene_);
@@ -34,6 +34,8 @@ FluidDisplayWidget::FluidDisplayWidget(QWidget *parent)
 
     setLayout(new QVBoxLayout());
     layout()->addWidget(view_);
+
+    setMouseTracking(true);
 
     // Set timer to update UI.
     auto ui_update_timer = new QTimer(this);
@@ -131,10 +133,37 @@ void FluidDisplayWidget::ShowDensityField(bool show)
 {
     show_density_ = show;
 }
+
 void FluidDisplayWidget::ShowVelocityField(bool show)
 {
     show_velocity_ = show;
     update();
+}
+
+void FluidDisplayWidget::mousePressEvent(QMouseEvent *event)
+{
+    std::cout << "Mouse down at " << event->pos().x() << ", " << event->pos().y() << std::endl;
+    auto view_pos = view_->mapFromParent(event->pos());
+    std::cout << "  pos in view is " << view_pos.x() << ", " << view_pos.y() << std::endl;
+    auto scene_pos = view_->mapToScene(view_pos);
+    std::cout << "  pos in scene is " << scene_pos.x() << ", " << scene_pos.y() << std::endl;
+    auto item = scene_->itemAt(scene_pos, QTransform());
+    if (item) {
+        if (event->button() == Qt::LeftButton) {
+            auto pct_x = scene_pos.x() / WIDTH;
+            auto pct_y = scene_pos.y() / HEIGHT;
+            emit RightClick(pct_x, pct_y);
+        }
+    }
+    // What we need here is the grid size so we can convert into a grid X,Y
+    // But we don't own that, it's a simulator attribute.
+    // We could convert the mouse click to a percentile image position click
+    // and emit a signal and then have the MainWindow update the simulator.
+    // Seems good to me.
+
+    std::cout << "  mapped to scene " << scene_pos.x() << ", " << scene_pos.y() << std::endl;
+    //        mapFromScene();
+    // Convert the mouse coords to image coords in our thingo
 }
 
 FluidDisplayWidget::~FluidDisplayWidget() {}
