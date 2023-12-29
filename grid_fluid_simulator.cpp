@@ -23,10 +23,28 @@ void GridFluidSimulator::InitialiseDensity()
             float dx = x + 0.5f - cx;
             float dy = y + 0.5f - cy;
             float d2 = dx * dx + dy * dy;
-            density_.at(y * dim_x_ + x) = (d2 < rad2) ? 1.0f : 0.0f;
+            density_.at(Index(x, y)) = (d2 < rad2) ? 1.0f : 0.0f;
         }
     }
 }
+
+void GridFluidSimulator::InitialiseVelocity()
+{
+    // Initialise a cosine wave of velocity
+    float cx = dim_x_ * 0.5f;
+    float cy = dim_y_ * 0.5f;
+    for (int y = 0; y < dim_y_; y++) {
+        for (int x = 0; x < dim_x_; x++) {
+            float angle = ((x - cx) / dim_x_) * M_PI;
+            float len = (1.0f - (std::fabsf(cy - y) / dim_y_)) * 0.5f;
+            auto vx = len * std::cosf(angle);
+            auto vy = len * std::sinf(angle);
+            velocity_x_.at(Index(x, y)) = vx;
+            velocity_y_.at(Index(x, y)) = vy;
+        }
+    }
+}
+
 uint32_t GridFluidSimulator::Width() const
 {
     return dim_x_;

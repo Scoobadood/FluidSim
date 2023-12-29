@@ -15,6 +15,7 @@ public:
     uint32_t Width() const;
     uint32_t Height() const;
     void InitialiseDensity() override;
+    void InitialiseVelocity() override;
 };
 
 #endif // GRID_FLUID_SIMULATOR_H
