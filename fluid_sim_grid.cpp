@@ -9,22 +9,23 @@ FluidGridSimulator::FluidGridSimulator(uint32_t width, uint32_t height) //
     : width_{width}                                                     //
     , height_{height}                                                   //
 {
-    width_ = width;
-    height_ = height;
     density_.resize(width * height, 0);
-    density_map_.resize(width * height, 0);
-    auto rad = width / 3.0f;
+    Initialise();
+}
 
+void FluidGridSimulator::Initialise()
+{
     // Initialise with a blob in the middle
+    auto rad = width_ / 4.0f;
+    auto rad2 = rad * rad;
     float cx = width_ / 2.0f;
     float cy = height_ / 2.0f;
     for (int y = 0; y < height_; y++) {
         for (int x = 0; x < width_; x++) {
             float dx = x + 0.5f - cx;
             float dy = y + 0.5f - cy;
-            float d = std::sqrtf(dx * dx + dy * dy);
-            if (d < rad)
-                density_.at(y * width_ + x) = 1.0f;
+            float d2 = dx * dx + dy * dy;
+            density_.at(y * width_ + x) = (d2 < rad2) ? 1.0f : 0.0f;
         }
     }
 }
@@ -39,12 +40,9 @@ uint32_t FluidGridSimulator::Height() const
     return height_;
 }
 
-std::vector<uint8_t> FluidGridSimulator::Data() const
+const std::vector<float>& FluidGridSimulator::Data() const
 {
-    for (auto i = 0; i < density_.size(); ++i) {
-        density_map_.at(i) = uint8_t(std::min(1.0f, density_.at(i)) * 255.0f);
-    }
-    return density_map_;
+    return density_;
 }
 
 inline uint32_t offset_index(uint32_t i, uint8_t j, uint32_t w)

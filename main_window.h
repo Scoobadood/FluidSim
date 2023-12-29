@@ -1,34 +1,29 @@
-#ifndef MAIN_WINDOW_H
-#define MAIN_WINDOW_H
+#ifndef MAINWINDOW_H
+#define MAINWINDOW_H
 
-#include "fluid_generator_thread.h"
+#include "fluid_display_widget.h"
+#include "fluid_sim_grid.h"
+#include "fluid_simulator_thread.h"
 
-#include <QGraphicsView>
 #include <QMainWindow>
-#include <QMutex>
-#include <QPushButton>
 
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
-
 public:
-    MainWindow(QWidget *parent = nullptr);
-    ~MainWindow();
+    explicit MainWindow(QWidget *parent = nullptr);
 
-private slots:
-    void ToggleSceneGeneration();
-    void UpdateScene(const std::vector<uint8_t> & new_data);
-    void UpdateUI();
+public slots:
+    void StepSim();
+    void ResetSim();
+    void StartSim();
+    void StopSim();
 
+protected:
 private:
-    QGraphicsView* graphics_view_;
-    QGraphicsScene *scene_;
-    QPushButton* btn_pause_resume_;
-    QImage *scene_image_;
-    QMutex scene_image_mutex_;
-    FluidGeneratorThread *fluid_generator_thread_;
+    FluidSimulatorThread *sim_thread_;
+    FluidGridSimulator *fluid_sim_;
+    FluidDisplayWidget *display_;
 };
 
-
-#endif // MAIN_WINDOW_H
+#endif // MAINWINDOW_H

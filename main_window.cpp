@@ -1,120 +1,70 @@
 #include "main_window.h"
+#include "control_panel_widget.h"
+#include "fluid_display_widget.h"
 
-#include <QGraphicsPixmapItem>
-#include <QGraphicsView>
-#include <QHBoxLayout>
+#include <QDockWidget>
 #include <QPushButton>
-#include <QTimer>
-
-const uint32_t WIDTH = 200;
-const uint32_t HEIGHT = 200;
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent)
+    : QMainWindow{parent}  //
+    , sim_thread_{nullptr} //
 {
-    // Initialize the UI components
-    auto central_widget = new QWidget(this);
-    auto layout = new QHBoxLayout();
-    central_widget->setLayout(layout);
-    setCentralWidget(central_widget);
+    auto control_panel = new ControlPanelWidget(this);
 
-    // Graphics
-    graphics_view_ = new QGraphicsView(this);
-    scene_ = new QGraphicsScene(0, 0, WIDTH, HEIGHT, this); // Create a QGraphicsScene
-    graphics_view_->setScene(scene_);
-    QSizePolicy size_policy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    size_policy.setVerticalStretch(1);
-    size_policy.setHorizontalStretch(1);
-    graphics_view_->setSizePolicy(size_policy);
-    layout->addWidget(graphics_view_);
+    // Create a QDockWidget
+    auto dock = new QDockWidget("Controls", this);
+    dock->setWidget(control_panel);
+    addDockWidget(Qt::TopDockWidgetArea, dock);
 
-    // Button
-    btn_pause_resume_ = new QPushButton("Resume", this);
-    size_policy.setHorizontalPolicy(QSizePolicy::Fixed);
-    size_policy.setVerticalPolicy(QSizePolicy::Fixed);
-    btn_pause_resume_->setSizePolicy(size_policy);
-    int preferred_width = btn_pause_resume_->sizeHint().width();
-    btn_pause_resume_->setFixedWidth(preferred_width);
-    btn_pause_resume_->setText("Pause");
-    layout->addWidget(btn_pause_resume_, 0, Qt::AlignTop);
+    fluid_sim_ = new FluidGridSimulator(200, 200);
 
-    // Allocate image
-    scene_image_ = new QImage(WIDTH, HEIGHT, QImage::Format_Grayscale8);
+    // Add some central content to the main window
+    display_ = new FluidDisplayWidget(this);
+    setCentralWidget(display_);
 
-    // Connect signals and slots for scene updates
-    fluid_generator_thread_ = new FluidGeneratorThread(WIDTH, HEIGHT);
-    connect(fluid_generator_thread_,
-            &FluidGeneratorThread::SceneUpdated,
-            this,
-            &MainWindow::UpdateScene);
-    connect(btn_pause_resume_, &QPushButton::clicked, this, &MainWindow::ToggleSceneGeneration);
-
-    fluid_generator_thread_->start();
-
-    // Set timer to update UI.
-    auto uiUpdateTimer = new QTimer(this);
-    connect(uiUpdateTimer, &QTimer::timeout, this, &MainWindow::UpdateUI);
-    uiUpdateTimer->start(33); // 30fps (1000ms / 30fps)
+    connect(control_panel, &ControlPanelWidget::Start, this, &MainWindow::StartSim);
+    connect(control_panel, &ControlPanelWidget::Stop, this, &MainWindow::StopSim);
+    connect(control_panel, &ControlPanelWidget::Reset, this, &MainWindow::ResetSim);
+    connect(control_panel, &ControlPanelWidget::Step, this, &MainWindow::StepSim);
 }
 
-void MainWindow::UpdateUI() {
-    // Lock the mutex to access the data
-    QMutexLocker locker(&scene_image_mutex_);
-
-    // Update the QGraphicsView with the latest data
-    // For example:
-    // scene_image_ contains the latest data from the generator
-    QGraphicsPixmapItem *pixmapItem = new QGraphicsPixmapItem(QPixmap::fromImage(*scene_image_));
-    //    pixmapItem->setScale(50.0f);
-    scene_->clear();
-    scene_->addItem(pixmapItem);
-
-    locker.unlock();
-
-    // Perform any other UI updates as needed
-}
-
-void MainWindow::UpdateScene(const std::vector<uint8_t> & new_data) {
-    // Lock the mutex to protect the data buffer
-    QMutexLocker locker(&scene_image_mutex_);
-
-    // Update scene_image_
-    uint8_t *pixel_data = reinterpret_cast<uint8_t *>(scene_image_->bits());
-    memcpy(pixel_data, new_data.data(), new_data.size());
-
-    locker.unlock();
-
-    // Update the QGraphicsView or perform any other processing with the data
-    // ...
-}
-
-void MainWindow::ToggleSceneGeneration() {
-    if (fluid_generator_thread_->isRunning()) {
-        // Pause data generation
-        fluid_generator_thread_->requestInterruption();
-        fluid_generator_thread_->wait();
-        btn_pause_resume_->setText("Resume");
-    } else {
-        // Resume data generation
-        fluid_generator_thread_->start();
-        btn_pause_resume_->setText("Pause");
-    }
-}
-
-MainWindow::~MainWindow()
+void MainWindow::StepSim()
 {
-    // Stop and clean up the data generation thread
-    if (fluid_generator_thread_->isRunning()) {
-        fluid_generator_thread_->requestInterruption();
-        fluid_generator_thread_->wait();
-    }
-    disconnect(btn_pause_resume_);
-
-    centralWidget()->layout()->removeWidget(btn_pause_resume_);
-    centralWidget()->layout()->removeWidget(graphics_view_);
-    delete centralWidget()->layout();
-    delete graphics_view_;
-    delete btn_pause_resume_;
-    delete fluid_generator_thread_;
+    fluid_sim_->Simulate();
+    display_->SimulatorUpdated(fluid_sim_);
 }
 
+void MainWindow::ResetSim()
+{
+    if (sim_thread_ != nullptr && sim_thread_->isRunning())
+        return;
+    fluid_sim_->Initialise();
+    display_->SimulatorUpdated(fluid_sim_);
+}
+
+void MainWindow::StartSim()
+{
+    if (sim_thread_ == nullptr) {
+        sim_thread_ = new FluidSimulatorThread(fluid_sim_);
+    }
+    if (sim_thread_->isRunning())
+        return;
+    connect(sim_thread_,
+            &FluidSimulatorThread::SimulationUpdated,
+            display_,
+            &FluidDisplayWidget::SimulatorUpdated);
+    sim_thread_->start();
+}
+
+void MainWindow::StopSim()
+{
+    if (!sim_thread_->isRunning())
+        return;
+    disconnect(sim_thread_,
+               &FluidSimulatorThread::SimulationUpdated,
+               display_,
+               &FluidDisplayWidget::SimulatorUpdated);
+
+    sim_thread_->requestInterruption();
+    sim_thread_->wait();
+}
