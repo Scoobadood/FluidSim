@@ -98,10 +98,18 @@ void FluidDisplayWidget::SimulatorUpdated(const FluidSimulator2D *simulator)
             for (auto x = 0; x < sim_x; ++x) {
                 auto vx = vel_x[i];
                 auto vy = vel_y[i];
-                painter.drawLine(tile_x * (x + 0.5f),
-                                 tile_y * (y + 0.5f),
-                                 tile_x * (x + 0.5f + vx),
-                                 tile_y * (y + 0.5f + vy));
+                auto start_x = tile_x * (x + 0.5f);
+                auto start_y = tile_y * (y + 0.5f);
+                auto end_x = tile_x * (x + 0.5f + vx);
+                auto end_y = tile_y * (y + 0.5f + vy);
+                painter.drawLine(start_x, start_y, end_x, end_y);
+                auto mid_x = (end_x - start_x) * 0.5f;
+                auto mid_y = (end_y - start_y) * 0.5f;
+                QPolygon arrowHead;
+                arrowHead << QPoint(start_x + mid_x - mid_y, start_y + mid_y - mid_x)
+                          << QPoint(end_x, end_y)
+                          << QPoint(start_x + mid_x + mid_y, start_y + mid_y + mid_x);
+                painter.drawPolygon(arrowHead);
                 ++i;
             }
         }
