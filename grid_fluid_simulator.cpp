@@ -53,25 +53,27 @@ void GridFluidSimulator::InitialiseVelocity()
 
 void GridFluidSimulator::Diffuse(std::vector<float>& target_density)
 {
-    // S is the target density for each cell. It's the average of the 4-neighbours
-    std::vector<float> s(num_cells_);
-    // Compute S
-    for (auto y = 1; y < dim_y_ - 1; ++y) {
-        for (auto x = 1; x < dim_x_ - 1; ++x) {
-            s.at(Index(x, y)) = 0.25f
-                                * (density_.at(Index(x - 1, y)) + density_.at(Index(x + 1, y))
-                                   + density_.at(Index(x, y - 1)) + density_.at(Index(x, y + 1)));
-        }
-    }
+    // Initialise target_density with current values because why not
+    std::memcpy(target_density.data(), density_.data(), num_cells_ * sizeof(float));
 
-    // Now compute the diffusion by using the time step and diffusion parameters
-    // This is (a) Linear and not good
-    // (b) Unstable, if delta_t * diffusion_rate_ exceeds 1.0f values can go nuts.
-    for (auto y = 1; y < dim_y_ - 1; ++y) {
-        for (auto x = 1; x < dim_x_ - 1; ++x) {
-            auto idx = Index(x, y);
-            target_density.at(idx) = density_.at(idx)
-                                     + (delta_t_ * diffusion_rate_ * (s.at(idx) - density_.at(idx)));
+    // Run four iterations of GS
+    // Dn(x,y) = Dc(x,y) + (k*0.25*(Dn(x+1,y)+Dn(x-1,y)+Dn(x,y+1)+Dn(x,y-1)))/(1+k)
+
+    auto factor = delta_t_ * diffusion_rate_;
+    auto denom = 1.0f / (factor + 1.0f);
+    for (auto iter = 0; iter < 4; ++iter) {
+        for (auto y = 1; y < dim_y_ - 1; ++y) {
+            for (auto x = 1; x < dim_x_ - 1; ++x) {
+                auto idx = Index(x, y);
+                auto left = target_density.at(idx - 1);
+                auto rght = target_density.at(idx + 1);
+                auto up = target_density.at(idx - dim_x_);
+                auto down = target_density.at(idx + dim_x_);
+
+                auto new_val = (density_.at(idx) + factor * 0.25f * (left + rght + up + down))
+                               * denom;
+                target_density.at(idx) = new_val;
+            }
         }
     }
 }
