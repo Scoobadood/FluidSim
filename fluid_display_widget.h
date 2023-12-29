@@ -21,6 +21,7 @@ private slots:
     void UpdateUI();
 
 private:
+    QGraphicsView *view_;
     QGraphicsScene *scene_;
     QImage *scene_image_;
     QMutex scene_image_mutex_;

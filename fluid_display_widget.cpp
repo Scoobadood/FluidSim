@@ -21,14 +21,17 @@ FluidDisplayWidget::FluidDisplayWidget(QWidget *parent)
     painter.drawText(10, 20, "Sim"); // Draw text on the image
     painter.end();
 
-    auto gw = new QGraphicsView(this);
+    view_ = new QGraphicsView(this);
+    view_->setRenderHint(QPainter::Antialiasing);
+    view_->setRenderHint(QPainter::SmoothPixmapTransform);
 
-    scene_ = new QGraphicsScene(gw);
-    gw->setScene(scene_);
+    scene_ = new QGraphicsScene(view_);
+    view_->setScene(scene_);
+
     scene_->addPixmap(QPixmap::fromImage(*scene_image_));
 
     setLayout(new QVBoxLayout());
-    layout()->addWidget(gw);
+    layout()->addWidget(view_);
 
     // Set timer to update UI.
     auto ui_update_timer = new QTimer(this);
@@ -43,8 +46,14 @@ void FluidDisplayWidget::UpdateUI()
 
     scene_->clear();
     scene_->addPixmap(QPixmap::fromImage(*scene_image_));
-
     locker.unlock();
+
+    auto widthScaleFactor = width() / scene_->width();
+    auto heightScaleFactor = height() / scene_->height();
+    auto scaleFactor = qMin(widthScaleFactor, heightScaleFactor);
+
+    // Scale the view's transformation matrix
+    view_->setTransform(QTransform::fromScale(scaleFactor, scaleFactor));
 }
 
 void FluidDisplayWidget::SimulatorUpdated(const FluidSimulator2D *simulator)
