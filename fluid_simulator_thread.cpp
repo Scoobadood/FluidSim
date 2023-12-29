@@ -6,6 +6,7 @@ FluidSimulatorThread::FluidSimulatorThread(FluidSimulator2D *simulator, QObject 
     : QThread{parent}       //
     , simulator_{simulator} //
 {
+    setObjectName("FluidSimulatorThread");
 }
 
 void FluidSimulatorThread::run()

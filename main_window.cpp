@@ -39,6 +39,10 @@ MainWindow::MainWindow(QWidget *parent)
 
 void MainWindow::StepSim()
 {
+    // Guard to prevent calls to SimulatorUpdated() from multiple threads
+    if (sim_thread_ && sim_thread_->isRunning())
+        return;
+
     fluid_sim_->Simulate();
     display_->SimulatorUpdated(fluid_sim_);
 }
@@ -61,7 +65,8 @@ void MainWindow::StartSim()
     connect(sim_thread_,
             &FluidSimulatorThread::SimulationUpdated,
             display_,
-            &FluidDisplayWidget::SimulatorUpdated);
+            &FluidDisplayWidget::SimulatorUpdated,
+            Qt::DirectConnection);
     sim_thread_->start();
 }
 

@@ -18,6 +18,25 @@ if(NOT Qt6_FOUND)
     message(FATAL_ERROR "Qt6 not found. Please make sure Qt6 is installed and CMake can locate it.")
 endif()
 
+
+
+include(FetchContent)
+
+# ------------------------------------------------------------------------------
+# A Fast C++ logging library.
+
+# Spdlog
+include(FetchContent)
+FetchContent_Declare(
+        spdlog
+        GIT_REPOSITORY https://github.com/gabime/spdlog.git
+        GIT_TAG        v1.x
+)
+FetchContent_MakeAvailable(spdlog)
+include_directories(${spdlog_SOURCE_DIR}/include)
+# ------------------------------------------------------------------------------
+
+
 set(PROJECT_SOURCES
         main.cpp
         fluid_display_widget.h fluid_display_widget.cpp
@@ -39,7 +58,8 @@ qt_add_executable(FluidSim
 
 target_link_libraries(FluidSim PRIVATE
     Qt6::Widgets
-    Qt6::OpenGLWidgets)
+    Qt6::OpenGLWidgets
+    spdlog::spdlog)
 
 set_target_properties(FluidSim PROPERTIES
     ${BUNDLE_ID_OPTION}

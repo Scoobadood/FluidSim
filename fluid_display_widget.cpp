@@ -1,5 +1,6 @@
 #include "fluid_display_widget.h"
 
+#include <QCoreApplication>
 #include <QGraphicsPixmapItem>
 #include <QGraphicsView>
 #include <QGraphicsWidget>
@@ -8,6 +9,7 @@
 #include <QPushButton>
 #include <QTimer>
 #include <iostream>
+#include <spdlog/spdlog.h>
 
 const uint32_t HEIGHT = 512;
 const uint32_t WIDTH = 512;
@@ -23,6 +25,8 @@ FluidDisplayWidget::FluidDisplayWidget(QWidget *parent)
     painter.setPen(Qt::black);
     painter.drawText(10, 20, "Sim"); // Draw text on the image
     painter.end();
+    scene_image_buffer_ = new QImage(WIDTH, HEIGHT, QImage::Format_RGBA8888);
+    std::memcpy(scene_image_buffer_->bits(), scene_image_->bits(), scene_image_->sizeInBytes());
 
     view_ = new QGraphicsView(this);
     view_->setRenderHint(QPainter::Antialiasing);
@@ -62,16 +66,16 @@ void FluidDisplayWidget::UpdateUI()
 
 void FluidDisplayWidget::SimulatorUpdated(const FluidSimulator2D *simulator)
 {
-    const float *src = simulator->Density().data();
     auto sim_x = simulator->DimX();
     auto sim_y = simulator->DimY();
     auto tile_x = scene_image_->width() / sim_x;
     auto tile_y = scene_image_->height() / sim_y;
 
-    QMutexLocker locker(&scene_image_mutex_);
-    QPainter painter(scene_image_);
+    // Write to buffer
+    QPainter painter(scene_image_buffer_);
 
     if (show_density_) {
+        const float *src = simulator->Density().data();
         auto i = 0;
         for (auto y = 0; y < sim_y; ++y) {
             for (auto x = 0; x < sim_x; ++x) {
@@ -125,7 +129,12 @@ void FluidDisplayWidget::SimulatorUpdated(const FluidSimulator2D *simulator)
             }
         }
     }
-    painter.end();
+    if (painter.isActive())
+        painter.end();
+
+    // Copy buffer to scene.
+    QMutexLocker locker(&scene_image_mutex_);
+    std::memcpy(scene_image_->bits(), scene_image_buffer_->bits(), scene_image_->sizeInBytes());
     locker.unlock();
 }
 

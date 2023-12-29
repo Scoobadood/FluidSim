@@ -32,6 +32,7 @@ private:
     QGraphicsView *view_;
     QGraphicsScene *scene_;
     QImage *scene_image_;
+    QImage *scene_image_buffer_;
     QMutex scene_image_mutex_;
 };
 
