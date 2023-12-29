@@ -16,7 +16,7 @@ public:
     ~FluidDisplayWidget();
 
 public slots:
-    void SimulatorUpdated(const FluidSimulator *simulator);
+    void SimulatorUpdated(const FluidSimulator2D *simulator);
 private slots:
     void UpdateUI();
 

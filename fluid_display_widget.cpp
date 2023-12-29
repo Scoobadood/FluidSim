@@ -4,11 +4,12 @@
 #include <QGraphicsView>
 #include <QGraphicsWidget>
 #include <QHBoxLayout>
+#include <QPainter>
 #include <QPushButton>
 #include <QTimer>
 
-const uint32_t HEIGHT = 200;
-const uint32_t WIDTH = 200;
+const uint32_t HEIGHT = 1024;
+const uint32_t WIDTH = 1024;
 
 FluidDisplayWidget::FluidDisplayWidget(QWidget *parent)
     : QWidget(parent) //
@@ -46,15 +47,30 @@ void FluidDisplayWidget::UpdateUI()
     locker.unlock();
 }
 
-void FluidDisplayWidget::SimulatorUpdated(const FluidSimulator *simulator)
+void FluidDisplayWidget::SimulatorUpdated(const FluidSimulator2D *simulator)
 {
     // Get data from Simulator and update display
     QMutexLocker locker(&scene_image_mutex_);
     const float *src = simulator->Density().data();
-    uint8_t *dst = scene_image_->bits();
-    for (auto i = 0; i < HEIGHT * WIDTH; ++i) {
-        dst[i] = (uint8_t) (std::fminf(255.0f, std::fmaxf(0.0f, std::roundf(src[i] * 255.0f))));
+
+    auto tile_x = scene_image_->width() / simulator->DimX();
+    auto tile_y = scene_image_->height() / simulator->DimY();
+
+    QPainter painter(scene_image_);
+    auto i = 0;
+    for (auto y = 0; y < simulator->DimY(); ++y) {
+        for (auto x = 0; x < simulator->DimX(); ++x) {
+            auto dst = (uint8_t) (std::fminf(255.0f,
+                                             std::fmaxf(0.0f, std::roundf(src[i] * 255.0f))));
+            painter.fillRect(tile_x * x,
+                             tile_y * y,
+                             tile_x,
+                             tile_y,
+                             QColor::fromRgb(dst, dst, dst, 255));
+            ++i;
+        }
     }
+    painter.end();
     locker.unlock();
 }
 
