@@ -23,6 +23,24 @@ ControlPanelWidget::ControlPanelWidget(QWidget *parent)
     reset_button_->setEnabled(false);
     connect(reset_button_, &QPushButton::clicked, this, &ControlPanelWidget::HandleResetButton);
     layout->addWidget(reset_button_);
+
+    density_checkbox_ = new QCheckBox("Show Density", this);
+    density_checkbox_->setEnabled(true);
+    density_checkbox_->setChecked(true);
+    connect(density_checkbox_,
+            &QCheckBox::clicked,
+            this,
+            &ControlPanelWidget::HandleDensityCheckbox);
+    layout->addWidget(density_checkbox_);
+
+    velocity_checkbox_ = new QCheckBox("Show Velocity", this);
+    velocity_checkbox_->setEnabled(true);
+    velocity_checkbox_->setChecked(false);
+    connect(velocity_checkbox_,
+            &QCheckBox::clicked,
+            this,
+            &ControlPanelWidget::HandleVelocityCheckbox);
+    layout->addWidget(velocity_checkbox_);
 }
 
 void ControlPanelWidget::HandleStartStopButton()
@@ -49,4 +67,14 @@ void ControlPanelWidget::HandleResetButton()
     step_button_->setEnabled(true);
     reset_button_->setEnabled(false);
     emit Reset();
+}
+
+void ControlPanelWidget::HandleDensityCheckbox(bool checked)
+{
+    emit ShowDensity(checked);
+}
+
+void ControlPanelWidget::HandleVelocityCheckbox(bool checked)
+{
+    emit ShowVelocity(checked);
 }

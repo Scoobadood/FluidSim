@@ -26,6 +26,14 @@ MainWindow::MainWindow(QWidget *parent)
     connect(control_panel, &ControlPanelWidget::Stop, this, &MainWindow::StopSim);
     connect(control_panel, &ControlPanelWidget::Reset, this, &MainWindow::ResetSim);
     connect(control_panel, &ControlPanelWidget::Step, this, &MainWindow::StepSim);
+    connect(control_panel, &ControlPanelWidget::ShowDensity, this, [&](bool show) {
+        display_->ShowDensityField(show);
+        StepSim();
+    });
+    connect(control_panel, &ControlPanelWidget::ShowVelocity, this, [&](bool show) {
+        display_->ShowVelocityField(show);
+        StepSim();
+    });
 }
 
 void MainWindow::StepSim()

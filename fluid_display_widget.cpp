@@ -12,9 +12,11 @@ const uint32_t HEIGHT = 1024;
 const uint32_t WIDTH = 1024;
 
 FluidDisplayWidget::FluidDisplayWidget(QWidget *parent)
-    : QWidget(parent) //
+    : QWidget(parent)       //
+    , show_density_{true}   //
+    , show_velocity_{false} //
 {
-    scene_image_ = new QImage(WIDTH, HEIGHT, QImage::Format_Grayscale8);
+    scene_image_ = new QImage(WIDTH, HEIGHT, QImage::Format_RGBA8888);
     QPainter painter(scene_image_);
     painter.fillRect(0, 0, WIDTH, HEIGHT, QColor(Qt::white)); // Fill the image with a white background
     painter.setPen(Qt::black);
@@ -58,29 +60,64 @@ void FluidDisplayWidget::UpdateUI()
 
 void FluidDisplayWidget::SimulatorUpdated(const FluidSimulator2D *simulator)
 {
-    // Get data from Simulator and update display
-    QMutexLocker locker(&scene_image_mutex_);
     const float *src = simulator->Density().data();
+    auto sim_x = simulator->DimX();
+    auto sim_y = simulator->DimY();
+    auto tile_x = scene_image_->width() / sim_x;
+    auto tile_y = scene_image_->height() / sim_y;
 
-    auto tile_x = scene_image_->width() / simulator->DimX();
-    auto tile_y = scene_image_->height() / simulator->DimY();
-
+    QMutexLocker locker(&scene_image_mutex_);
     QPainter painter(scene_image_);
-    auto i = 0;
-    for (auto y = 0; y < simulator->DimY(); ++y) {
-        for (auto x = 0; x < simulator->DimX(); ++x) {
-            auto dst = (uint8_t) (std::fminf(255.0f,
-                                             std::fmaxf(0.0f, std::roundf(src[i] * 255.0f))));
-            painter.fillRect(tile_x * x,
-                             tile_y * y,
-                             tile_x,
-                             tile_y,
-                             QColor::fromRgb(dst, dst, dst, 255));
-            ++i;
+
+    if (show_density_) {
+        auto i = 0;
+        for (auto y = 0; y < sim_y; ++y) {
+            for (auto x = 0; x < sim_x; ++x) {
+                auto dst = (uint8_t) (std::fminf(255.0f,
+                                                 std::fmaxf(0.0f, std::roundf(src[i] * 255.0f))));
+                painter.fillRect(tile_x * x,
+                                 tile_y * y,
+                                 tile_x,
+                                 tile_y,
+                                 QColor::fromRgb(dst, dst, dst, 255));
+                ++i;
+            }
+        }
+    } else {
+        painter.fillRect(0, 0, sim_x * tile_x, sim_y * tile_y, QColorConstants::Black);
+    }
+
+    // Get data from Simulator and update display
+    if (show_velocity_) {
+        auto vel_x = simulator->VelocityX();
+        auto vel_y = simulator->VelocityY();
+
+        auto i = 0;
+        painter.setPen(QColorConstants::Red);
+        for (auto y = 0; y < sim_y; ++y) {
+            for (auto x = 0; x < sim_x; ++x) {
+                auto vx = vel_x[i];
+                auto vy = vel_y[i];
+                painter.drawLine(tile_x * (x + 0.5f),
+                                 tile_y * (y + 0.5f),
+                                 tile_x * (x + 0.5f + vx),
+                                 tile_y * (y + 0.5f + vy));
+                ++i;
+            }
         }
     }
     painter.end();
     locker.unlock();
+}
+
+void FluidDisplayWidget::ShowDensityField(bool show)
+{
+    show_density_ = show;
+}
+void FluidDisplayWidget::ShowVelocityField(bool show)
+{
+    show_velocity_ = show;
+    update();
 }
 
 FluidDisplayWidget::~FluidDisplayWidget() {}

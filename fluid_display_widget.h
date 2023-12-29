@@ -17,10 +17,14 @@ public:
 
 public slots:
     void SimulatorUpdated(const FluidSimulator2D *simulator);
+    void ShowDensityField(bool);
+    void ShowVelocityField(bool);
 private slots:
     void UpdateUI();
 
 private:
+    bool show_density_;
+    bool show_velocity_;
     QGraphicsView *view_;
     QGraphicsScene *scene_;
     QImage *scene_image_;
