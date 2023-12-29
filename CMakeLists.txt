@@ -21,11 +21,13 @@ endif()
 set(PROJECT_SOURCES
         main.cpp
         fluid_display_widget.h fluid_display_widget.cpp
-        fluid_sim_grid.cpp
-
-
-        fluid_sim_grid.h
+        grid_fluid_simulator.cpp grid_fluid_simulator.h
         fluid_simulator_thread.h fluid_simulator_thread.cpp
+        main_window.h main_window.cpp
+        control_panel_widget.h control_panel_widget.cpp
+        mike_ash_fluid_simulator.h mike_ash_fluid_simulator.cpp
+        fluid_simulator.h
+        fluid_simulator_2d.h fluid_simulator_2d.cpp
 )
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
@@ -33,10 +35,6 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 qt_add_executable(FluidSim
     MANUAL_FINALIZATION
     ${PROJECT_SOURCES}
-    main_window.h main_window.cpp
-    control_panel_widget.h control_panel_widget.cpp
-    mike_ash_fluid_simulator.h mike_ash_fluid_simulator.cpp
-    fluid_simulator.h
 )
 
 target_link_libraries(FluidSim PRIVATE

@@ -38,7 +38,7 @@ void MainWindow::ResetSim()
 {
     if (sim_thread_ != nullptr && sim_thread_->isRunning())
         return;
-    fluid_sim_->Initialise();
+    fluid_sim_->InitialiseDensity();
     display_->SimulatorUpdated(fluid_sim_);
 }
 

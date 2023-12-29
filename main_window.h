@@ -2,7 +2,7 @@
 #define MAINWINDOW_H
 
 #include "fluid_display_widget.h"
-#include "fluid_sim_grid.h"
+#include "grid_fluid_simulator.h"
 #include "fluid_simulator_thread.h"
 
 #include <QMainWindow>

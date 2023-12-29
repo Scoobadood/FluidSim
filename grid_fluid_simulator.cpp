@@ -1,4 +1,4 @@
-#include "fluid_sim_grid.h"
+#include "grid_fluid_simulator.h"
 #include <QThread>
 #include <cmath>
 #include <iostream>
@@ -6,46 +6,35 @@
 const float FLOW_RATE = 0.1f;
 
 GridFluidSimulator::GridFluidSimulator(uint32_t width, uint32_t height) //
-    : width_{width}                                                     //
-    , height_{height}                                                   //
+    : FluidSimulator2D{width, height}                                   //
 {
-    if (width_ == 0 || height_ == 0) {
-        throw std::runtime_error("Width and heightmust be non-zero");
-    }
-    density_.resize(width * height, 0);
     Initialise();
 }
 
-void GridFluidSimulator::Initialise()
+void GridFluidSimulator::InitialiseDensity()
 {
     // Initialise with a blob in the middle
-    auto rad = width_ / 4.0f;
+    auto rad = dim_x_ / 4.0f;
     auto rad2 = rad * rad;
-    float cx = width_ / 2.0f;
-    float cy = height_ / 2.0f;
-    for (int y = 0; y < height_; y++) {
-        for (int x = 0; x < width_; x++) {
+    float cx = dim_x_ / 2.0f;
+    float cy = dim_y_ / 2.0f;
+    for (int y = 0; y < dim_y_; y++) {
+        for (int x = 0; x < dim_x_; x++) {
             float dx = x + 0.5f - cx;
             float dy = y + 0.5f - cy;
             float d2 = dx * dx + dy * dy;
-            density_.at(y * width_ + x) = (d2 < rad2) ? 1.0f : 0.0f;
+            density_.at(y * dim_x_ + x) = (d2 < rad2) ? 1.0f : 0.0f;
         }
     }
 }
-
 uint32_t GridFluidSimulator::Width() const
 {
-    return width_;
+    return dim_x_;
 }
 
 uint32_t GridFluidSimulator::Height() const
 {
-    return height_;
-}
-
-const std::vector<float>& GridFluidSimulator::Density() const
-{
-    return density_;
+    return dim_y_;
 }
 
 inline uint32_t offset_index(uint32_t i, uint8_t j, uint32_t w)
@@ -64,7 +53,7 @@ inline uint32_t offset_index(uint32_t i, uint8_t j, uint32_t w)
 
 void GridFluidSimulator::Simulate()
 {
-    std::vector<float> flow(width_ * height_, 0.0f);
+    std::vector<float> flow(dim_x_ * dim_y_, 0.0f);
 
     std::vector<float> nbr_density(8);
     std::vector<float> desired_flow(8);
@@ -76,14 +65,14 @@ void GridFluidSimulator::Simulate()
         std::fill(desired_flow.begin(), desired_flow.end(), 0);
 
         for (auto j = 0; j < 8; ++j) {
-            auto flow_idx = offset_index(i, j, width_);
-            if (j < 3 && (i < width_))
+            auto flow_idx = offset_index(i, j, dim_x_);
+            if (j < 3 && (i < dim_x_))
                 continue;
-            if (j > 4 && (i / width_ == height_ - 1))
+            if (j > 4 && (i / dim_x_ == dim_y_ - 1))
                 continue;
-            if ((j == 0 || j == 3 || j == 5) && (i % width_ == 0))
+            if ((j == 0 || j == 3 || j == 5) && (i % dim_x_ == 0))
                 continue;
-            if ((j == 2 || j == 4 || j == 7) && (i % width_ == width_ - 1))
+            if ((j == 2 || j == 4 || j == 7) && (i % dim_x_ == dim_x_ - 1))
                 continue;
             nbr_density[j] = density_.at(flow_idx);
         }
@@ -111,7 +100,7 @@ void GridFluidSimulator::Simulate()
                 if (nbr_density.at(j) == -1)
                     continue;
                 auto flowed = flow_ratio * desired_flow.at(j);
-                auto flow_idx = offset_index(i, j, width_);
+                auto flow_idx = offset_index(i, j, dim_x_);
                 flow.at(flow_idx) += flowed;
                 flow.at(i) -= flowed;
             }

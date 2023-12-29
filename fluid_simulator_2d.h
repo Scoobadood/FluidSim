@@ -1,0 +1,31 @@
+#ifndef FLUID_SIMULATOR_2D_H
+#define FLUID_SIMULATOR_2D_H
+
+#include "fluid_simulator.h"
+
+class FluidSimulator2D : public FluidSimulator
+{
+public:
+    FluidSimulator2D(uint32_t dim_x, uint32_t dim_y);
+    virtual void Simulate() = 0;
+    virtual const std::vector<float>& Density() const;
+    virtual const std::vector<float>& VelocityX() const;
+    virtual const std::vector<float>& VelocityY() const;
+
+protected:
+    virtual const inline uint32_t Index(uint32_t x, uint32_t y) const { return y * dim_x_ + x; };
+    virtual void Initialise();
+    virtual void InitialiseDensity(){};
+    virtual void InitialiseVelocity(){};
+    uint32_t dim_x_;
+    uint32_t dim_y_;
+    uint32_t num_cells_;
+    std::vector<float> density_;
+    std::vector<float> velocity_x_;
+    std::vector<float> velocity_y_;
+
+private:
+    void AllocateStorage();
+};
+
+#endif // FLUID_SIMULATOR_2D_H

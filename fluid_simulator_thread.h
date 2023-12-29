@@ -1,7 +1,7 @@
 #ifndef FLUID_SIMULATOR_THREAD_H
 #define FLUID_SIMULATOR_THREAD_H
 
-#include "fluid_sim_grid.h"
+#include "grid_fluid_simulator.h"
 
 #include <QThread>
 
