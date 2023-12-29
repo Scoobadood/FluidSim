@@ -2,7 +2,7 @@
 
 #include <QThread>
 
-FluidSimulatorThread::FluidSimulatorThread(FluidGridSimulator *simulator, QObject *parent)
+FluidSimulatorThread::FluidSimulatorThread(GridFluidSimulator *simulator, QObject *parent)
     : QThread{parent}       //
     , simulator_{simulator} //
 {

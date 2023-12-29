@@ -5,15 +5,18 @@
 
 const float FLOW_RATE = 0.1f;
 
-FluidGridSimulator::FluidGridSimulator(uint32_t width, uint32_t height) //
+GridFluidSimulator::GridFluidSimulator(uint32_t width, uint32_t height) //
     : width_{width}                                                     //
     , height_{height}                                                   //
 {
+    if (width_ == 0 || height_ == 0) {
+        throw std::runtime_error("Width and heightmust be non-zero");
+    }
     density_.resize(width * height, 0);
     Initialise();
 }
 
-void FluidGridSimulator::Initialise()
+void GridFluidSimulator::Initialise()
 {
     // Initialise with a blob in the middle
     auto rad = width_ / 4.0f;
@@ -30,17 +33,17 @@ void FluidGridSimulator::Initialise()
     }
 }
 
-uint32_t FluidGridSimulator::Width() const
+uint32_t GridFluidSimulator::Width() const
 {
     return width_;
 }
 
-uint32_t FluidGridSimulator::Height() const
+uint32_t GridFluidSimulator::Height() const
 {
     return height_;
 }
 
-const std::vector<float>& FluidGridSimulator::Data() const
+const std::vector<float>& GridFluidSimulator::Density() const
 {
     return density_;
 }
@@ -59,7 +62,7 @@ inline uint32_t offset_index(uint32_t i, uint8_t j, uint32_t w)
     return new_idx;
 }
 
-void FluidGridSimulator::Simulate()
+void GridFluidSimulator::Simulate()
 {
     std::vector<float> flow(width_ * height_, 0.0f);
 

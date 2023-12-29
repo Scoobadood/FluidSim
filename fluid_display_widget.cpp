@@ -46,11 +46,11 @@ void FluidDisplayWidget::UpdateUI()
     locker.unlock();
 }
 
-void FluidDisplayWidget::SimulatorUpdated(const FluidGridSimulator *simulator)
+void FluidDisplayWidget::SimulatorUpdated(const FluidSimulator *simulator)
 {
     // Get data from Simulator and update display
     QMutexLocker locker(&scene_image_mutex_);
-    const float *src = simulator->Data().data();
+    const float *src = simulator->Density().data();
     uint8_t *dst = scene_image_->bits();
     for (auto i = 0; i < HEIGHT * WIDTH; ++i) {
         dst[i] = (uint8_t) (std::fminf(255.0f, std::fmaxf(0.0f, std::roundf(src[i] * 255.0f))));

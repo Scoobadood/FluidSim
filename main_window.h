@@ -22,7 +22,7 @@ public slots:
 protected:
 private:
     FluidSimulatorThread *sim_thread_;
-    FluidGridSimulator *fluid_sim_;
+    GridFluidSimulator *fluid_sim_;
     FluidDisplayWidget *display_;
 };
 

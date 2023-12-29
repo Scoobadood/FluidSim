@@ -35,6 +35,8 @@ qt_add_executable(FluidSim
     ${PROJECT_SOURCES}
     main_window.h main_window.cpp
     control_panel_widget.h control_panel_widget.cpp
+    mike_ash_fluid_simulator.h mike_ash_fluid_simulator.cpp
+    fluid_simulator.h
 )
 
 target_link_libraries(FluidSim PRIVATE

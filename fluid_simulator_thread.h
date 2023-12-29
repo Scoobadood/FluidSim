@@ -9,16 +9,16 @@ class FluidSimulatorThread : public QThread
 {
     Q_OBJECT
 public:
-    explicit FluidSimulatorThread(FluidGridSimulator *simulator, QObject *parent = nullptr);
+    explicit FluidSimulatorThread(GridFluidSimulator *simulator, QObject *parent = nullptr);
 
 signals:
-    void SimulationUpdated(FluidGridSimulator *simulator);
+    void SimulationUpdated(GridFluidSimulator *simulator);
 
 protected:
     void run() override;
 
 private:
-    FluidGridSimulator *simulator_;
+    GridFluidSimulator *simulator_;
 };
 
 #endif // FLUID_SIMULATOR_THREAD_H
