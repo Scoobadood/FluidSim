@@ -9,13 +9,22 @@
 class GridFluidSimulator : public FluidSimulator2D
 {
 public:
-    GridFluidSimulator(uint32_t width, uint32_t height);
+    GridFluidSimulator(uint32_t width,      //
+                       uint32_t height,     //
+                       float delta_t,       //
+                       float diffusion_rate //
+    );
 
     void Simulate() override;
-    uint32_t Width() const;
-    uint32_t Height() const;
     void InitialiseDensity() override;
     void InitialiseVelocity() override;
+
+protected:
+    void Diffuse(std::vector<float>& target_density);
+
+private:
+    float delta_t_;
+    float diffusion_rate_;
 };
 
 #endif // GRID_FLUID_SIMULATOR_H

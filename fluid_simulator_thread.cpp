@@ -14,6 +14,6 @@ void FluidSimulatorThread::run()
         // Generate data
         simulator_->Simulate();
         emit SimulationUpdated(simulator_);
-        QThread::msleep(1);
+        QThread::msleep(33);
     }
 }
