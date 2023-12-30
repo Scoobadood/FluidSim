@@ -21,8 +21,10 @@ public:
 
 protected:
     void Diffuse(std::vector<float>& target_density);
+    void AdvectDensity(std::vector<float>& target_density);
 
 private:
+    static inline float Lerp(float from, float to, float pct) { return from + pct * (to - from); }
     float delta_t_;
     float diffusion_rate_;
 };
