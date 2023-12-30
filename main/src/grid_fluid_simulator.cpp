@@ -1,9 +1,11 @@
 #include "grid_fluid_simulator.h"
 #include <QThread>
 #include "spdlog/spdlog.h"
+#include "../include/grid_fluid_simulator.h"
+
 #include <cmath>
 
-const uint32_t NUM_GS_ITERS = 20;
+const uint32_t NUM_GS_ITERS = 10;
 
 GridFluidSimulator::GridFluidSimulator(uint32_t width,      //
                                        uint32_t height,     //
@@ -43,12 +45,14 @@ void GridFluidSimulator::InitialiseVelocity() {
    *   0  |   .5   |  0.0  | 0.0
    *   0  |  -.5   |  0.0  |-0.0
    */
+  auto cx = dim_x_ * 0.5f;
+  auto cy = dim_y_ * 0.5f;
   for (int y = 0; y < dim_y_; y++) {
     for (int x = 0; x < dim_x_; x++) {
-      auto fx = (float) x / dim_x_;
-      auto fy = (float) y / dim_y_;
-      velocity_x_.at(Index(x, y)) = fy - fx;
-      velocity_y_.at(Index(x, y)) = fx - fy;
+      auto fx = ((float) x - cx) / dim_x_;
+      auto fy = ((float) y - cy) / dim_y_;
+      velocity_x_.at(Index(x, y)) = 1.0f;
+      velocity_y_.at(Index(x, y)) = x > cx ? 1.0f : -1.0f;
     }
   }
 }
@@ -95,61 +99,55 @@ void GridFluidSimulator::Diffuse(const std::vector<float> &current_density,
     }
     CorrectBoundaryDensities(next_density);
   }
-
-  auto start_sum = 0.0f;
-  auto start_bdry = 0.0f;
-  auto end_sum = 0.0f;
-  auto end_bdry = 0.0f;
-  for (auto y = 0; y < dim_y_; ++y) {
-    for (auto x = 0; x < dim_x_; ++x) {
-      if (x == 0 || y == 0 || x == dim_x_ - 1 || y == dim_y_ - 1) {
-        start_bdry += current_density.at(Index(x, y));
-        end_bdry += next_density.at(Index(x, y));
-      } else {
-        start_sum += current_density.at(Index(x, y));
-        end_sum += next_density.at(Index(x, y));
-      }
-    }
-  }
-  spdlog::debug("Diffusion S: {:0.3f}  SB: {:0.3f} E: {:0.3f}  EB: {:0.3f}  L: {:0.3f}",
-                start_sum,
-                start_bdry,
-                end_sum,
-                end_bdry,
-                end_sum - start_sum);
 }
 
-float GridFluidSimulator::AdvectValue(const std::vector<float> &source_data,
-                                      uint32_t x,
-                                      uint32_t y) const {
+float GridFluidSimulator::AdvectValue(const std::vector<float> &velocity_x,
+                                      const std::vector<float> &velocity_y,
+                                      const std::vector<float> &source_data,
+                                      uint32_t x, uint32_t y) const {
   auto idx = Index(x, y);
 
   // Get the velocity for this cell
-  auto vx = velocity_x_.at(idx);
-  auto vy = velocity_y_.at(idx);
+  auto vx = velocity_x.at(idx);
+  auto vy = velocity_y.at(idx);
 
   // Get the source point for that flow
-  auto source_x = (x) - vx * delta_t_;
-  auto source_y = (y) - vy * delta_t_;
-  source_x = std::fmaxf(0.5f, std::fminf(dim_x_ - 0.5f, source_x));
-  source_y = std::fmaxf(0.5f, std::fminf(dim_y_ - 0.5f, source_y));
+  auto source_x = ((float) x + 0.5f) - vx * delta_t_;
+  auto source_y = ((float) y + 0.5f) - vy * delta_t_;
+  source_x = std::fmaxf(0.5f, std::fminf((float) dim_x_ - 0.5f, source_x));
+  source_y = std::fmaxf(0.5f, std::fminf((float) dim_y_ - 0.5f, source_y));
 
+  /* 0     1     2     3
+   * +-----+-----+-----+  0
+   * |     |     |     |
+   * |     |     |     |
+   * |     |     |     |
+   * +-----+-----+-----+  1
+   * |     |     |     |
+   * |  o  |  o  |     |
+   * |     |x    |     |
+   * +-----+-----+-----+  2
+   * |     |     |     |
+   * |  o  |  o  |     |
+   * |     |     |     |
+   * +-----+-----+-----+  3
+   */
   // Get the base coord
-  auto base_x = (uint32_t) std::floorf(source_x);
-  auto base_y = (uint32_t) std::floorf(source_y);
+  auto base_x = std::floorf(source_x - 0.5f);
+  auto base_y = std::floorf(source_y - 0.5f);
 
   // And the fractional offset
-  auto frac_x = source_x - base_x;
-  auto frac_y = source_y - base_y;
+  auto frac_x = source_x - base_x - 0.5f;
+  auto frac_y = source_y - base_y - 0.5f;
 
   // Interpolate top and bottom
-  auto top_lerp = Lerp(source_data.at(Index(base_x, base_y)),
-                       source_data.at(Index(base_x + 1, base_y)),
-                       frac_x);
-  auto btm_lerp = Lerp(source_data.at(Index(base_x, base_y + 1)),
-                       source_data.at(Index(base_x + 1, base_y + 1)),
-                       frac_x);
-  auto final_val = Lerp(top_lerp, btm_lerp, frac_y);
+  auto bl = source_data.at(Index((uint32_t) base_x, (uint32_t) base_y));
+  auto br = source_data.at(Index((uint32_t) base_x + 1, (uint32_t) base_y));
+  auto tl = source_data.at(Index((uint32_t) base_x, (uint32_t) base_y + 1));
+  auto tr = source_data.at(Index((uint32_t) base_x + 1, (uint32_t) base_y + 1));
+  auto top_lerp = Lerp(tl, tr, frac_x);
+  auto btm_lerp = Lerp(bl, br, frac_x);
+  auto final_val = Lerp(btm_lerp, top_lerp, frac_y);
   // interpolate top to bottom
   return final_val;
 }
@@ -159,24 +157,22 @@ void GridFluidSimulator::AdvectDensity(const std::vector<float> &curr_density,
   std::fill(advected_density.begin(), advected_density.end(), 0.0f);
   for (auto y = 1; y < dim_y_ - 1; ++y) {
     for (auto x = 1; x < dim_x_ - 1; ++x) {
-      advected_density.at(Index(x, y)) = AdvectValue(curr_density, x, y);
+      advected_density.at(Index(x, y)) = AdvectValue(velocity_x_, velocity_y_, curr_density, x, y);
     }
   }
+  CorrectBoundaryDensities(advected_density);
 }
 
-void GridFluidSimulator::AdvectVelocity() {
-  std::vector<float> advected_velocity_x(num_cells_);
-  std::vector<float> advected_velocity_y(num_cells_);
-
+void GridFluidSimulator::AdvectVelocity(std::vector<float> &advected_velocity_x,
+                                        std::vector<float> &advected_velocity_y) const {
   for (auto y = 1; y < dim_y_ - 1; ++y) {
     for (auto x = 1; x < dim_x_ - 1; ++x) {
       auto idx = Index(x, y);
-      advected_velocity_x.at(idx) = AdvectValue(velocity_x_, x, y);
-      advected_velocity_y.at(idx) = AdvectValue(velocity_y_, x, y);
+      advected_velocity_x.at(idx) = AdvectValue(velocity_x_, velocity_y_, velocity_x_, x, y);
+      advected_velocity_y.at(idx) = AdvectValue(velocity_x_, velocity_y_, velocity_y_, x, y);
     }
   }
-  std::memcpy(velocity_x_.data(), advected_velocity_x.data(), num_cells_ * sizeof(float));
-  std::memcpy(velocity_y_.data(), advected_velocity_y.data(), num_cells_ * sizeof(float));
+  CorrectBoundaryVelocities(advected_velocity_x, advected_velocity_y);
 }
 
 /*
@@ -210,7 +206,7 @@ void GridFluidSimulator::ComputePressure(const std::vector<float> &divergence,
   std::fill(temp_pressure.begin(), temp_pressure.end(), 0);
 
   // TODO: Parameterise this count
-  for (auto iter = 0; iter < 4; ++iter) {
+  for (auto iter = 0; iter < NUM_GS_ITERS; ++iter) {
     for (auto y = 1; y < dim_y_ - 1; ++y) {
       for (auto x = 1; x < dim_x_ - 1; ++x) {
         auto idx = Index(x, y);
@@ -226,6 +222,7 @@ void GridFluidSimulator::ComputePressure(const std::vector<float> &divergence,
         temp_pressure.at(idx) = p;
       }
     }
+
     std::memcpy(pressure.data(), temp_pressure.data(), num_cells_ * sizeof(float));
   }
 }
@@ -258,9 +255,10 @@ void GridFluidSimulator::SuppressDivergence() {
     velocity_x_.at(i) -= curl_x.at(i);
     velocity_y_.at(i) -= curl_y.at(i);
   }
+  CorrectBoundaryVelocities(velocity_x_, velocity_y_);
 }
 
-void GridFluidSimulator::CorrectBoundaryDensities(std::vector<float>& densities) const {
+void GridFluidSimulator::CorrectBoundaryDensities(std::vector<float> &densities) const {
   // Horizontal boundaries
   for (auto x = 1; x < dim_x_ - 1; ++x) {
     // Top
@@ -272,45 +270,71 @@ void GridFluidSimulator::CorrectBoundaryDensities(std::vector<float>& densities)
     densities.at(Index(0, y)) = densities.at(Index(1, y));
     densities.at(Index(dim_x_ - 1, y)) = densities.at(Index(dim_x_ - 2, y));
   }
-  densities.at(Index(0, 0)) = 0.5f * (densities.at(Index(1, 0))+densities.at(Index(0, 1)));
-  densities.at(Index(0, dim_y_-1)) = 0.5f * (densities.at(Index(0, dim_y_-2))+densities.at(Index(1, dim_y_-1)));
-  densities.at(Index(dim_x_-1, 0)) = 0.5f * (densities.at(Index(dim_x_-2, 0))+densities.at(Index(dim_x_-1, 1)));
-  densities.at(Index(dim_x_-1, dim_y_-1)) = 0.5f * (densities.at(Index(dim_x_-2, dim_y_-1))+densities.at(Index(dim_x_-1, dim_y_-2)));
+  densities.at(Index(0, 0)) = 0.5f * (densities.at(Index(1, 0)) + densities.at(Index(0, 1)));
+  densities.at(Index(0, dim_y_ - 1)) = 0.5f * (densities.at(Index(0, dim_y_ - 2)) + densities.at(Index(1, dim_y_ - 1)));
+  densities.at(Index(dim_x_ - 1, 0)) = 0.5f * (densities.at(Index(dim_x_ - 2, 0)) + densities.at(Index(dim_x_ - 1, 1)));
+  densities.at(Index(dim_x_ - 1, dim_y_ - 1)) =
+          0.5f * (densities.at(Index(dim_x_ - 2, dim_y_ - 1)) + densities.at(Index(dim_x_ - 1, dim_y_ - 2)));
 }
 
-void GridFluidSimulator::CorrectBoundaryVelocities() {
+void GridFluidSimulator::CorrectBoundaryVelocities(std::vector<float> &velocity_x,
+                                                   std::vector<float> &velocity_y) const {
   // Horizontal boundaries
   for (auto x = 1; x < dim_x_ - 1; ++x) {
     // Top
-    velocity_x_.at(Index(x, 0)) = velocity_x_.at(Index(x, 1));
-    velocity_y_.at(Index(x, 0)) = -velocity_y_.at(Index(x, 1));
+    velocity_x.at(Index(x, 0)) = velocity_x.at(Index(x, 1));
+    velocity_y.at(Index(x, 0)) = -velocity_y.at(Index(x, 1));
 
     // Bottom
-    velocity_x_.at(Index(x, dim_y_ - 1)) = velocity_x_.at(Index(x, dim_y_ - 2));
-    velocity_y_.at(Index(x, dim_y_ - 1)) = -velocity_y_.at(Index(x, dim_y_ - 2));
+    velocity_x.at(Index(x, dim_y_ - 1)) = velocity_x.at(Index(x, dim_y_ - 2));
+    velocity_y.at(Index(x, dim_y_ - 1)) = -velocity_y.at(Index(x, dim_y_ - 2));
   }
   // Vertical boundaries
   for (auto y = 1; y < dim_y_ - 1; ++y) {
     // Left
-    velocity_x_.at(Index(0, y)) = -velocity_x_.at(Index(1, y));
-    velocity_y_.at(Index(0, y)) = velocity_y_.at(Index(1, y));
+    velocity_x.at(Index(0, y)) = -velocity_x.at(Index(1, y));
+    velocity_y.at(Index(0, y)) = velocity_y.at(Index(1, y));
     // Right
-    velocity_x_.at(Index(dim_x_ - 1, y)) = -velocity_x_.at(Index(dim_x_ - 2, y));
-    velocity_y_.at(Index(dim_x_ - 1, y)) = velocity_y_.at(Index(dim_x_ - 2, y));
+    velocity_x.at(Index(dim_x_ - 1, y)) = -velocity_x.at(Index(dim_x_ - 2, y));
+    velocity_y.at(Index(dim_x_ - 1, y)) = velocity_y.at(Index(dim_x_ - 2, y));
   }
-  // Corners are not accessible during calcs so we can ignore.
+  velocity_x.at(Index(0, 0)) = 0.5f * (velocity_x.at(Index(1, 0)) + velocity_x.at(Index(0, 1)));
+  velocity_x.at(Index(0, dim_y_ - 1)) =
+          0.5f * (velocity_x.at(Index(0, dim_y_ - 2)) + velocity_x.at(Index(1, dim_y_ - 1)));
+  velocity_x.at(Index(dim_x_ - 1, 0)) =
+          0.5f * (velocity_x.at(Index(dim_x_ - 2, 0)) + velocity_x.at(Index(dim_x_ - 1, 1)));
+  velocity_x.at(Index(dim_x_ - 1, dim_y_ - 1)) =
+          0.5f * (velocity_x.at(Index(dim_x_ - 2, dim_y_ - 1)) + velocity_x.at(Index(dim_x_ - 1, dim_y_ - 2)));
+
+  velocity_y.at(Index(0, 0)) = 0.5f * (velocity_y.at(Index(1, 0)) + velocity_y.at(Index(0, 1)));
+  velocity_y.at(Index(0, dim_y_ - 1)) =
+          0.5f * (velocity_y.at(Index(0, dim_y_ - 2)) + velocity_y.at(Index(1, dim_y_ - 1)));
+  velocity_y.at(Index(dim_x_ - 1, 0)) =
+          0.5f * (velocity_y.at(Index(dim_x_ - 2, 0)) + velocity_y.at(Index(dim_x_ - 1, 1)));
+  velocity_y.at(Index(dim_x_ - 1, dim_y_ - 1)) =
+          0.5f * (velocity_y.at(Index(dim_x_ - 2, dim_y_ - 1)) + velocity_y.at(Index(dim_x_ - 1, dim_y_ - 2)));
 }
 
 void GridFluidSimulator::Simulate() {
-  std::vector<float> target_density(num_cells_);
-  Diffuse(density_, target_density);
-  std::memcpy(density_.data(), target_density.data(), num_cells_ * sizeof(float));
+  std::vector<float> temp_density(num_cells_, 0);
+  std::vector<float> temp_velocity_x(num_cells_, 0);
+  std::vector<float> temp_velocity_y(num_cells_, 0);
 
-  CorrectBoundaryVelocities();
-  AdvectDensity(density_, target_density);
-  std::memcpy(density_.data(), target_density.data(), num_cells_ * sizeof(float));
+  Diffuse(density_, temp_density);
+  std::memcpy(density_.data(), temp_density.data(), num_cells_ * sizeof(float));
 
-  AdvectVelocity();
-  CorrectBoundaryVelocities();
+  AdvectDensity(density_, temp_density);
+  std::memcpy(density_.data(), temp_density.data(), num_cells_ * sizeof(float));
+
+  Diffuse(velocity_x_, temp_velocity_x);
+  Diffuse(velocity_y_, temp_velocity_y);
+  CorrectBoundaryVelocities(temp_velocity_x, temp_velocity_y);
+  std::memcpy(velocity_x_.data(), temp_velocity_x.data(), num_cells_ * sizeof(float));
+  std::memcpy(velocity_y_.data(), temp_velocity_y.data(), num_cells_ * sizeof(float));
+
+  AdvectVelocity(temp_velocity_x, temp_velocity_y);
+  std::memcpy(velocity_x_.data(), temp_velocity_x.data(), num_cells_ * sizeof(float));
+  std::memcpy(velocity_y_.data(), temp_velocity_y.data(), num_cells_ * sizeof(float));
+
   SuppressDivergence();
 }

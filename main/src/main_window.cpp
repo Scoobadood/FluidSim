@@ -3,7 +3,6 @@
 #include "fluid_display_widget.h"
 
 #include <QDockWidget>
-#include <QPushButton>
 
 const uint32_t SIM_GRID_SIZE = 64;
 
