@@ -2,9 +2,8 @@
 #include <QThread>
 #include "spdlog/spdlog.h"
 #include <cmath>
-#include <iostream>
 
-const float FLOW_RATE = 0.1f;
+const uint32_t NUM_GS_ITERS = 20;
 
 GridFluidSimulator::GridFluidSimulator(uint32_t width,      //
                                        uint32_t height,     //
@@ -56,7 +55,6 @@ void GridFluidSimulator::InitialiseVelocity() {
 
 void GridFluidSimulator::Diffuse(const std::vector<float> &current_density,
                                  std::vector<float> &next_density) {
-  const uint32_t NUM_GS_ITERS = 5;
   // Initialise target_density with current values because why not
   std::memcpy(next_density.data(), current_density.data(), num_cells_ * sizeof(float));
 
@@ -95,6 +93,7 @@ void GridFluidSimulator::Diffuse(const std::vector<float> &current_density,
         next_density.at(idx) = new_val;
       }
     }
+    CorrectBoundaryDensities(next_density);
   }
 
   auto start_sum = 0.0f;
@@ -261,18 +260,22 @@ void GridFluidSimulator::SuppressDivergence() {
   }
 }
 
-void GridFluidSimulator::CorrectBoundaryDensities() {
+void GridFluidSimulator::CorrectBoundaryDensities(std::vector<float>& densities) const {
   // Horizontal boundaries
   for (auto x = 1; x < dim_x_ - 1; ++x) {
     // Top
-    density_.at(Index(x, 0)) = density_.at(Index(x, 1));
-    density_.at(Index(x, dim_y_ - 1)) = density_.at(Index(x, dim_y_ - 2));
+    densities.at(Index(x, 0)) = densities.at(Index(x, 1));
+    densities.at(Index(x, dim_y_ - 1)) = densities.at(Index(x, dim_y_ - 2));
   }
   // Vertical boundaries
   for (auto y = 1; y < dim_y_ - 1; ++y) {
-    density_.at(Index(0, y)) = density_.at(Index(1, y));
-    density_.at(Index(dim_x_ - 1, y)) = density_.at(Index(dim_x_ - 2, y));
+    densities.at(Index(0, y)) = densities.at(Index(1, y));
+    densities.at(Index(dim_x_ - 1, y)) = densities.at(Index(dim_x_ - 2, y));
   }
+  densities.at(Index(0, 0)) = 0.5f * (densities.at(Index(1, 0))+densities.at(Index(0, 1)));
+  densities.at(Index(0, dim_y_-1)) = 0.5f * (densities.at(Index(0, dim_y_-2))+densities.at(Index(1, dim_y_-1)));
+  densities.at(Index(dim_x_-1, 0)) = 0.5f * (densities.at(Index(dim_x_-2, 0))+densities.at(Index(dim_x_-1, 1)));
+  densities.at(Index(dim_x_-1, dim_y_-1)) = 0.5f * (densities.at(Index(dim_x_-2, dim_y_-1))+densities.at(Index(dim_x_-1, dim_y_-2)));
 }
 
 void GridFluidSimulator::CorrectBoundaryVelocities() {
@@ -300,11 +303,9 @@ void GridFluidSimulator::CorrectBoundaryVelocities() {
 
 void GridFluidSimulator::Simulate() {
   std::vector<float> target_density(num_cells_);
-  CorrectBoundaryDensities();
   Diffuse(density_, target_density);
   std::memcpy(density_.data(), target_density.data(), num_cells_ * sizeof(float));
 
-  CorrectBoundaryDensities();
   CorrectBoundaryVelocities();
   AdvectDensity(density_, target_density);
   std::memcpy(density_.data(), target_density.data(), num_cells_ * sizeof(float));

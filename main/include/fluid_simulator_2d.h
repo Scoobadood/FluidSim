@@ -24,7 +24,7 @@ public:
   virtual void Initialise();
 
 protected:
-  virtual const inline uint32_t Index(uint32_t x, uint32_t y) const { return y * dim_x_ + x; };
+  inline uint32_t Index(uint32_t x, uint32_t y) const { return y * dim_x_ + x; };
 
   virtual void InitialiseDensity() {};
 

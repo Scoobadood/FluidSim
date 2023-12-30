@@ -41,9 +41,9 @@ private:
                         std::vector<float> &curl_x,
                         std::vector<float> &curl_y) const;
 
-  void CorrectBoundaryVelocities();
+  void CorrectBoundaryDensities(std::vector<float>& densities) const;
 
-  void CorrectBoundaryDensities();
+  void CorrectBoundaryVelocities();
 
   void ForwardAdvectDensity(const std::vector<float> &current_density,
                             std::vector<float> &next_density) const;
