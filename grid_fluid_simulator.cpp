@@ -309,55 +309,6 @@ void GridFluidSimulator::CorrectBoundaryVelocities()
     // Corners are not accessible during calcs so we can ignore.
 }
 
-void GridFluidSimulator::ForwardAdvectDensity(const std::vector<float>& current_density,
-					      std::vector<float>& next_density) const
-{
-    std::fill(next_density.begin(), next_density.end(), 0.0f);
-    for (auto y = 1; y < dim_y_ - 1; ++y) {
-	for (auto x = 1; x < dim_x_ - 1; ++x) {
-	    auto src_idx = Index(x, y);
-	    auto vx = velocity_x_.at(src_idx);
-	    auto vy = velocity_y_.at(src_idx);
-
-	    float dest_x = x + delta_t_ * vx;
-	    float dest_y = y + delta_t_ * vy;
-	    uint32_t base_x = (uint32_t) std::floorf(dest_x);
-	    auto base_y = (uint32_t) std::floorf(dest_y);
-	    auto frac_x = dest_x - base_x;
-	    auto frac_y = dest_y - base_y;
-
-	    auto src_density = current_density.at(src_idx);
-	    auto top_density = frac_y * src_density;
-	    auto btm_density = src_density - top_density;
-
-	    auto top_left_density = frac_x * top_density;
-	    auto top_right_density = top_density - top_left_density;
-	    auto btm_left_density = frac_x * btm_density;
-	    auto btm_right_density = btm_density - btm_left_density;
-
-	    auto curb_x = [&](uint32_t x) -> uint32_t {
-	      if (x >= dim_x_ - 1)
-		x -= (dim_x_ - 2);
-	      else if (x <= 0)
-		x += (dim_x_ - 2);
-	      return x;
-	    };
-	    auto curb_y = [&](uint32_t y) -> uint32_t {
-	      if (y >= dim_y_ - 1)
-		y -= (dim_y_ - 2);
-	      else if (y <= 0)
-		y += (dim_y_ - 2);
-	      return y;
-	    };
-
-	    next_density.at(Index(curb_x(base_x), curb_y(base_y))) += btm_left_density;
-	    next_density.at(Index(curb_x(base_x + 1), curb_y(base_y))) += btm_right_density;
-	    next_density.at(Index(curb_x(base_x), curb_y(base_y + 1))) += top_left_density;
-	    next_density.at(Index(curb_x(base_x + 1), curb_y(base_y + 1))) += top_right_density;
-	}
-    }
-}
-
 void GridFluidSimulator::Simulate()
 {
     std::vector<float> target_density(num_cells_);
@@ -365,11 +316,12 @@ void GridFluidSimulator::Simulate()
     Diffuse(density_, target_density);
     std::memcpy(density_.data(), target_density.data(), num_cells_ * sizeof(float));
 
-    //    CorrectBoundaryVelocities();
-    //    AdvectDensity(density_, target_density);
-    //    ForwardAdvectDensity(density_, target_density);
-    //    std::memcpy(density_.data(), target_density.data(), num_cells_ * sizeof(float));
+    CorrectBoundaryDensities();
+    CorrectBoundaryVelocities();
+    AdvectDensity(density_, target_density);
+    std::memcpy(density_.data(), target_density.data(), num_cells_ * sizeof(float));
 
-    //    AdvectVelocity();
-    //    SuppressDivergence();
+    AdvectVelocity();
+    CorrectBoundaryVelocities();
+    SuppressDivergence();
 }
