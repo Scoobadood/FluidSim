@@ -48,12 +48,13 @@ void GridFluidSimulator::InitialiseVelocity()
     float cx = dim_x_ * 0.5f;
     float cy = dim_y_ * 0.5f;
     for (int y = 0; y < dim_y_; y++) {
-        for (int x = 0; x < dim_x_; x++) {
-            auto fx = 4.f * (x - cx) / dim_x_;
-            auto fy = 4.f * (y - cy) / dim_y_;
-            velocity_x_.at(Index(x, y)) = fx - fy - fx * (fx * fx + fy * fy);
-            velocity_y_.at(Index(x, y)) = fx + fy - fy * (fx * fx + fy * fy);
-        }
+	for (int x = 0; x < dim_x_; x++) {
+	    auto fx = 4.f * (x - cx) / dim_x_;
+	    auto fy = 4.f * (y - cy) / dim_y_;
+	    //            velocity_x_.at(Index(x, y)) = fx - fy - fx * (fx * fx + fy * fy);
+	    //            velocity_y_.at(Index(x, y)) = fx + fy - fy * (fx * fx + fy * fy);
+	    velocity_x_.at(Index(x, y)) = fx * fy;
+	}
     }
 }
 
@@ -145,15 +146,100 @@ void GridFluidSimulator::AdvectVelocity()
     std::memcpy(velocity_y_.data(), advected_velocity_y.data(), num_cells_ * sizeof(float));
 }
 
+/*
+ * d(x,y) = [ vx(x+1,y) - vx(x-1,y) + vy(x,y+1)-vy(x,y-1) ] * 0.5f
+ */
+void GridFluidSimulator::ComputeDivergence(std::vector<float>& divergence) const
+{
+    for (auto y = 1; y < dim_y_ - 1; ++y) {
+	for (auto x = 1; x < dim_x_ - 1; ++x) {
+	    auto idx = Index(x, y);
+	    divergence.at(idx) =                   //
+		(                                  //
+		    velocity_x_.at(idx + 1) -      //
+		    velocity_x_.at(idx - 1) +      //
+		    velocity_y_.at(idx + dim_x_) - //
+		    velocity_y_.at(idx - dim_x_)   //
+		    )
+		* 0.5f;
+	}
+    }
+}
+
+/*
+ * Compute pressure and solve to obtain stable field
+ * 0.25f * [p(x-1,y)+p(x+1,y)+p(x,y-1)+p(x,y+1)- divergence(x,y)] =p(x,y)
+ */
+void GridFluidSimulator::ComputePressure(const std::vector<float>& divergence,
+					 std::vector<float>& pressure) const
+{
+    // Set pressure to zero everywhere
+    std::fill(pressure.begin(), pressure.end(), 0);
+    std::vector<float> temp_pressure(num_cells_, 0);
+    std::fill(temp_pressure.begin(), temp_pressure.end(), 0);
+
+    // TODO: Parameterise this count
+    for (auto iter = 0; iter < 4; ++iter) {
+	for (auto y = 1; y < dim_y_ - 1; ++y) {
+	    for (auto x = 1; x < dim_x_ - 1; ++x) {
+		auto idx = Index(x, y);
+
+		auto p = (                               //
+			     pressure.at(idx - 1) +      //
+			     pressure.at(idx + 1) +      //
+			     pressure.at(idx - dim_x_) + //
+			     pressure.at(idx + dim_x_) - //
+			     divergence.at(idx)          //
+			     )
+			 * 0.25f;
+		temp_pressure.at(idx) = p;
+	    }
+	}
+	std::memcpy(pressure.data(), temp_pressure.data(), num_cells_ * sizeof(float));
+    }
+}
+
+/*
+ * \nabla p(x,y) =0.5f * [  p(x+1,y) - p(x-1),y), p(x,y+1)-p(x,y-1) ]
+ */
+void GridFluidSimulator::ComputeCurlField(const std::vector<float>& pressure,
+					  std::vector<float>& curl_x,
+					  std::vector<float>& curl_y) const
+{
+    for (auto y = 1; y < dim_y_ - 1; ++y) {
+	for (auto x = 1; x < dim_x_ - 1; ++x) {
+	    auto idx = Index(x, y);
+	    curl_x.at(idx) = (pressure.at(idx + 1) - pressure.at(idx - 1)) * 0.5f;
+	    curl_y.at(idx) = (pressure.at(idx + dim_x_) - pressure.at(idx - dim_x_)) * 0.5f;
+	}
+    }
+}
+void GridFluidSimulator::SuppressDivergence()
+{
+    std::vector<float> divergence(num_cells_, 0);
+    ComputeDivergence(divergence);
+    std::vector<float> pressure(num_cells_, 0);
+    ComputePressure(divergence, pressure);
+    std::vector<float> curl_x(num_cells_, 0);
+    std::vector<float> curl_y(num_cells_, 0);
+    ComputeCurlField(pressure, curl_x, curl_y);
+
+    for (auto i = 0; i < num_cells_; ++i) {
+	velocity_x_.at(i) -= curl_x.at(i);
+	velocity_y_.at(i) -= curl_y.at(i);
+    }
+}
+
 void GridFluidSimulator::Simulate()
 {
     std::vector<float> target_density(num_cells_);
     Diffuse(target_density);
     AdvectDensity(target_density);
     AdvectVelocity();
+    SuppressDivergence();
 
     // Update the density
     for (auto i = 0; i < density_.size(); ++i) {
-        density_.at(i) = target_density.at(i);
+	density_.at(i) = target_density.at(i);
     }
 }

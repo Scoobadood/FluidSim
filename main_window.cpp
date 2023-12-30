@@ -16,7 +16,7 @@ MainWindow::MainWindow(QWidget *parent)
     dock->setWidget(control_panel);
     addDockWidget(Qt::TopDockWidgetArea, dock);
 
-    fluid_sim_ = new GridFluidSimulator(32, 32, 1.0f / 60.0f, 0.8f);
+    fluid_sim_ = new GridFluidSimulator(128, 128, 1.0f / 5.0f, 0.3f);
 
     // Add some central content to the main window
     display_ = new FluidDisplayWidget(this);

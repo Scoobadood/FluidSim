@@ -21,11 +21,17 @@ public:
 
 protected:
     void Diffuse(std::vector<float>& target_density);
+    void SuppressDivergence();
+
+  private:
     float AdvectValue(const std::vector<float>& source_data, uint32_t x, uint32_t y) const;
     void AdvectDensity(std::vector<float>& target_density);
     void AdvectVelocity();
-
-private:
+    void ComputeDivergence(std::vector<float>& divergence) const;
+    void ComputePressure(const std::vector<float>& divergence, std::vector<float>& pressure) const;
+    void ComputeCurlField(const std::vector<float>& pressure,
+			  std::vector<float>& curl_x,
+			  std::vector<float>& curl_y) const;
     static inline float Lerp(float from, float to, float pct) { return from + pct * (to - from); }
     float delta_t_;
     float diffusion_rate_;
