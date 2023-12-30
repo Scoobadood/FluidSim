@@ -36,17 +36,23 @@ void GridFluidSimulator::InitialiseDensity()
 
 void GridFluidSimulator::InitialiseVelocity()
 {
-    // Initialise a cosine wave of velocity
+    // Initialise a spiral
+    /*
+     * fx   |   fy   |   vx  |  vy
+     * -----+--------+-------+-----
+     *   0  |   .01  |  0.0  | 0.5
+     *   0  |  -.01  |  0.0  |-0.5
+     *   0  |   .5   |  0.0  | 0.0
+     *   0  |  -.5   |  0.0  |-0.0
+     */
     float cx = dim_x_ * 0.5f;
     float cy = dim_y_ * 0.5f;
     for (int y = 0; y < dim_y_; y++) {
         for (int x = 0; x < dim_x_; x++) {
-            float angle = ((x - cx) / dim_x_) * M_PI;
-            float len = (1.0f - (std::fabsf(cy - y) / dim_y_)) * 0.5f;
-            auto vx = len * std::cosf(angle);
-            auto vy = len * std::sinf(angle);
-            velocity_x_.at(Index(x, y)) = vx;
-            velocity_y_.at(Index(x, y)) = vy;
+            auto fx = 4.f * (x - cx) / dim_x_;
+            auto fy = 4.f * (y - cy) / dim_y_;
+            velocity_x_.at(Index(x, y)) = fx - fy - fx * (fx * fx + fy * fy);
+            velocity_y_.at(Index(x, y)) = fx + fy - fy * (fx * fx + fy * fy);
         }
     }
 }
@@ -78,41 +84,65 @@ void GridFluidSimulator::Diffuse(std::vector<float>& target_density)
     }
 }
 
+float GridFluidSimulator::AdvectValue(const std::vector<float>& source_data,
+                                      uint32_t x,
+                                      uint32_t y) const
+{
+    auto idx = Index(x, y);
+
+    // Get the velocity for this cell
+    auto vx = velocity_x_.at(idx);
+    auto vy = velocity_y_.at(idx);
+
+    // Get the source point for that flow
+    auto source_x = x - vx * delta_t_;
+    auto source_y = y - vy * delta_t_;
+
+    // Get the base coord
+    auto base_x = std::floorf(source_x);
+    auto base_y = std::floorf(source_y);
+
+    // And the fractional offset
+    auto frac_x = source_x - base_x;
+    auto frac_y = source_y - base_y;
+
+    // Interpolate top and bottom
+    auto top_lerp = Lerp(source_data.at(Index(base_x, base_y)),
+                         source_data.at(Index(base_x + 1, base_y)),
+                         frac_x);
+    auto btm_lerp = Lerp(source_data.at(Index(base_x, base_y + 1)),
+                         source_data.at(Index(base_x + 1, base_y + 1)),
+                         frac_x);
+    // interpolate top to bottom
+    return Lerp(top_lerp, btm_lerp, frac_y);
+}
+
 void GridFluidSimulator::AdvectDensity(std::vector<float>& target_density)
 {
-    std::vector<float> advected_density(target_density.size());
+    std::vector<float> advected_density(num_cells_);
+
+    for (auto y = 1; y < dim_y_ - 1; ++y) {
+        for (auto x = 1; x < dim_x_ - 1; ++x) {
+            advected_density.at(Index(x, y)) = AdvectValue(target_density, x, y);
+        }
+    }
+    std::memcpy(target_density.data(), advected_density.data(), num_cells_ * sizeof(float));
+}
+
+void GridFluidSimulator::AdvectVelocity()
+{
+    std::vector<float> advected_velocity_x(num_cells_);
+    std::vector<float> advected_velocity_y(num_cells_);
 
     for (auto y = 1; y < dim_y_ - 1; ++y) {
         for (auto x = 1; x < dim_x_ - 1; ++x) {
             auto idx = Index(x, y);
-            // Get the velocity for this cell
-            auto vx = velocity_x_.at(idx);
-            auto vy = velocity_y_.at(idx);
-            // Get the source point for that flow
-            auto flow_x = x - vx * delta_t_;
-            auto flow_y = y - vy * delta_t_;
-            // Get the base coord
-            auto base_x = std::floorf(flow_x);
-            auto base_y = std::floorf(flow_y);
-            // And the fractional offset
-            auto frac_x = flow_x - base_x;
-            auto frac_y = flow_y - base_y;
-            // Interpolate top and bottom
-            auto base_idx = Index(base_x, base_y);
-            auto top_lerp = Lerp(target_density.at(base_idx),
-                                 target_density.at(base_idx + 1),
-                                 frac_x);
-            base_idx = Index(base_x, base_y + 1);
-            auto btm_lerp = Lerp(target_density.at(base_idx),
-                                 target_density.at(base_idx + 1),
-                                 frac_x);
-            // interpolate top to bottom
-            advected_density.at(idx) = Lerp(top_lerp, btm_lerp, frac_y);
+            advected_velocity_x.at(idx) = AdvectValue(velocity_x_, x, y);
+            advected_velocity_y.at(idx) = AdvectValue(velocity_y_, x, y);
         }
     }
-    std::memcpy(target_density.data(),
-                advected_density.data(),
-                target_density.size() * sizeof(float));
+    std::memcpy(velocity_x_.data(), advected_velocity_x.data(), num_cells_ * sizeof(float));
+    std::memcpy(velocity_y_.data(), advected_velocity_y.data(), num_cells_ * sizeof(float));
 }
 
 void GridFluidSimulator::Simulate()
@@ -120,6 +150,7 @@ void GridFluidSimulator::Simulate()
     std::vector<float> target_density(num_cells_);
     Diffuse(target_density);
     AdvectDensity(target_density);
+    AdvectVelocity();
 
     // Update the density
     for (auto i = 0; i < density_.size(); ++i) {

@@ -16,7 +16,7 @@ MainWindow::MainWindow(QWidget *parent)
     dock->setWidget(control_panel);
     addDockWidget(Qt::TopDockWidgetArea, dock);
 
-    fluid_sim_ = new GridFluidSimulator(64, 64, 1.0f / 60.0f, 0.8f);
+    fluid_sim_ = new GridFluidSimulator(32, 32, 1.0f / 60.0f, 0.8f);
 
     // Add some central content to the main window
     display_ = new FluidDisplayWidget(this);
@@ -51,7 +51,7 @@ void MainWindow::ResetSim()
 {
     if (sim_thread_ != nullptr && sim_thread_->isRunning())
         return;
-    fluid_sim_->InitialiseDensity();
+    fluid_sim_->Initialise();
     display_->SimulatorUpdated(fluid_sim_);
 }
 

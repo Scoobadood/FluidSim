@@ -14,10 +14,10 @@ public:
     virtual const std::vector<float>& VelocityX() const;
     virtual const std::vector<float>& VelocityY() const;
     virtual void AddDensity(uint32_t x, uint32_t y, float amount);
+    virtual void Initialise();
 
 protected:
     virtual const inline uint32_t Index(uint32_t x, uint32_t y) const { return y * dim_x_ + x; };
-    virtual void Initialise();
     virtual void InitialiseDensity(){};
     virtual void InitialiseVelocity(){};
     uint32_t dim_x_;

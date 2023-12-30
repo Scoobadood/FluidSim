@@ -21,7 +21,9 @@ public:
 
 protected:
     void Diffuse(std::vector<float>& target_density);
+    float AdvectValue(const std::vector<float>& source_data, uint32_t x, uint32_t y) const;
     void AdvectDensity(std::vector<float>& target_density);
+    void AdvectVelocity();
 
 private:
     static inline float Lerp(float from, float to, float pct) { return from + pct * (to - from); }
