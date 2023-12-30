@@ -5,6 +5,8 @@
 #include <QDockWidget>
 #include <QPushButton>
 
+const uint32_t SIM_GRID_SIZE = 64;
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow{parent}  //
     , sim_thread_{nullptr} //
@@ -16,7 +18,7 @@ MainWindow::MainWindow(QWidget *parent)
     dock->setWidget(control_panel);
     addDockWidget(Qt::TopDockWidgetArea, dock);
 
-    fluid_sim_ = new GridFluidSimulator(128, 128, 1.0f / 5.0f, 0.3f);
+    fluid_sim_ = new GridFluidSimulator(SIM_GRID_SIZE, SIM_GRID_SIZE, 1.0f / 15.0f, 0.2f);
 
     // Add some central content to the main window
     display_ = new FluidDisplayWidget(this);

@@ -74,23 +74,21 @@ void FluidDisplayWidget::SimulatorUpdated(const FluidSimulator2D *simulator)
     // Write to buffer
     QPainter painter(scene_image_buffer_);
 
+    painter.fillRect(0, 0, sim_x * tile_x, sim_y * tile_y, QColorConstants::Black);
     if (show_density_) {
         const float *src = simulator->Density().data();
-        auto i = 0;
-        for (auto y = 0; y < sim_y; ++y) {
-            for (auto x = 0; x < sim_x; ++x) {
-                auto dst = (uint8_t) (std::fminf(255.0f,
-                                                 std::fmaxf(0.0f, std::roundf(src[i] * 255.0f))));
-                painter.fillRect(tile_x * x,
-                                 tile_y * y,
-                                 tile_x,
-                                 tile_y,
-                                 QColor::fromRgb(dst, dst, dst, 255));
-                ++i;
-            }
-        }
-    } else {
-        painter.fillRect(0, 0, sim_x * tile_x, sim_y * tile_y, QColorConstants::Black);
+	for (auto y = 1; y < sim_y - 1; ++y) {
+	  for (auto x = 1; x < sim_x - 1; ++x) {
+	    auto idx = y * sim_x + x;
+	    auto dst = (uint8_t) (std::fminf(255.0f,
+					     std::fmaxf(0.0f, std::roundf(src[idx] * 255.0f))));
+	    painter.fillRect(tile_x * x,
+			     tile_y * y,
+			     tile_x,
+			     tile_y,
+			     QColor::fromRgb(dst, dst, dst, 255));
+	  }
+	}
     }
 
     // Get data from Simulator and update display
