@@ -35,7 +35,7 @@ MainWindow::MainWindow(QWidget *parent)
     display_->ShowVelocityField(show);
     StepSim();
   });
-  connect(display_, &FluidDisplayWidget::RightClick, this, &MainWindow::HandleRightClick);
+  connect(display_, &FluidDisplayWidget::SpawnSource, this, &MainWindow::HandleRightClick);
 }
 
 void MainWindow::StepSim() {
@@ -50,7 +50,8 @@ void MainWindow::StepSim() {
 void MainWindow::ResetSim() {
   if (sim_thread_ != nullptr && sim_thread_->isRunning())
     return;
-  fluid_sim_->Initialise();
+  fluid_sim_->InitialiseDensity();
+  fluid_sim_->InitialiseVelocity();
   display_->SimulatorUpdated(fluid_sim_);
 }
 
@@ -81,7 +82,7 @@ void MainWindow::StopSim() {
 }
 
 void MainWindow::HandleRightClick(float px, float py) {
-  auto x = (uint32_t) std::round(px * fluid_sim_->DimX());
-  auto y = (uint32_t) std::round(py * fluid_sim_->DimY());
+  auto x = (uint32_t) std::roundf(px * (float)fluid_sim_->DimX());
+  auto y = (uint32_t) std::roundf(py * (float)fluid_sim_->DimY());
   fluid_sim_->AddDensity(x, y, 0.5f);
 }

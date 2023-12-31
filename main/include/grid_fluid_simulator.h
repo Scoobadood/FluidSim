@@ -16,9 +16,9 @@ public:
 
   void Simulate() override;
 
-  void InitialiseDensity() override;
+  void InitialiseDensity();
 
-  void InitialiseVelocity() override;
+  void InitialiseVelocity();
 
 protected:
   void Diffuse(const std::vector<float> &current_density, std::vector<float> &next_density);
@@ -26,7 +26,7 @@ protected:
   void SuppressDivergence();
 
 private:
-  float AdvectValue(const std::vector<float> &velocity_x,
+  [[nodiscard]] float AdvectValue(const std::vector<float> &velocity_x,
                     const std::vector<float> &velocity_y,
                     const std::vector<float> &source_data,
                     uint32_t x, uint32_t y) const;

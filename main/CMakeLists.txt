@@ -2,15 +2,19 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 qt_add_executable(FluidSim
         MANUAL_FINALIZATION
+
         src/main.cpp
+
+        # Ui
         include/fluid_display_widget.h src/fluid_display_widget.cpp
-        include/grid_fluid_simulator.h src/grid_fluid_simulator.cpp
         include/fluid_simulator_thread.h src/fluid_simulator_thread.cpp
         include/main_window.h src/main_window.cpp
         include/control_panel_widget.h src/control_panel_widget.cpp
-        include/mike_ash_fluid_simulator.h src/mike_ash_fluid_simulator.cpp
+
+        # Sims
         include/fluid_simulator.h
         include/fluid_simulator_2d.h src/fluid_simulator_2d.cpp
+        include/grid_fluid_simulator.h src/grid_fluid_simulator.cpp
 )
 
 target_link_libraries(FluidSim PRIVATE

@@ -12,8 +12,10 @@ public:
   explicit FluidSimulatorThread(FluidSimulator2D *simulator, QObject *parent = nullptr);
 
 signals:
-
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "NotImplementedFunctions"
   void SimulationUpdated(FluidSimulator2D *simulator);
+#pragma clang diagnostic pop
 
 protected:
   void run() override;

@@ -1,7 +1,6 @@
 #include "grid_fluid_simulator.h"
 #include <QThread>
 #include "spdlog/spdlog.h"
-#include "../include/grid_fluid_simulator.h"
 
 #include <cmath>
 
@@ -16,45 +15,18 @@ GridFluidSimulator::GridFluidSimulator(uint32_t width,      //
         , delta_t_{delta_t}                                     //
         , diffusion_rate_{diffusion_rate}                       //
 {
-  Initialise();
+  InitialiseDensity();
+  InitialiseVelocity();
 }
 
 void GridFluidSimulator::InitialiseDensity() {
   // Initialise with a blob in the middle
-  auto rad = dim_x_ / 4.0f;
-  auto rad2 = rad * rad;
-  float cx = dim_x_ / 2.0f;
-  float cy = dim_y_ / 2.0f;
-  for (int y = 0; y < dim_y_; y++) {
-    for (int x = 0; x < dim_x_; x++) {
-      float dx = x + 0.5f - cx;
-      float dy = y + 0.5f - cy;
-      float d2 = dx * dx + dy * dy;
-      density_.at(Index(x, y)) = (d2 < rad2) ? 1.0f : 0.0f;
-    }
-  }
+  // TODO: Initialise density field here
 }
 
 void GridFluidSimulator::InitialiseVelocity() {
-  // Initialise a spiral
-  /*
-   * fx   |   fy   |   vx  |  vy
-   * -----+--------+-------+-----
-   *   0  |   .01  |  0.0  | 0.5
-   *   0  |  -.01  |  0.0  |-0.5
-   *   0  |   .5   |  0.0  | 0.0
-   *   0  |  -.5   |  0.0  |-0.0
-   */
-  auto cx = dim_x_ * 0.5f;
-  auto cy = dim_y_ * 0.5f;
-  for (int y = 0; y < dim_y_; y++) {
-    for (int x = 0; x < dim_x_; x++) {
-      auto fx = ((float) x - cx) / dim_x_;
-      auto fy = ((float) y - cy) / dim_y_;
-      velocity_x_.at(Index(x, y)) = 1.0f;
-      velocity_y_.at(Index(x, y)) = x > cx ? 1.0f : -1.0f;
-    }
-  }
+  // Initialise with a blob in the middle
+  // TODO: Initialise velocity field here
 }
 
 void GridFluidSimulator::Diffuse(const std::vector<float> &current_density,
@@ -319,6 +291,10 @@ void GridFluidSimulator::Simulate() {
   std::vector<float> temp_density(num_cells_, 0);
   std::vector<float> temp_velocity_x(num_cells_, 0);
   std::vector<float> temp_velocity_y(num_cells_, 0);
+
+  ProcessSources();
+  CorrectBoundaryDensities(density_);
+  CorrectBoundaryVelocities(velocity_x_, velocity_y_);
 
   Diffuse(density_, temp_density);
   std::memcpy(density_.data(), temp_density.data(), num_cells_ * sizeof(float));

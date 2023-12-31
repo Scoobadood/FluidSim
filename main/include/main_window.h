@@ -1,5 +1,5 @@
-#ifndef MAINWINDOW_H
-#define MAINWINDOW_H
+#ifndef MAIN_WINDOW_H
+#define MAIN_WINDOW_H
 
 #include "fluid_display_widget.h"
 #include "grid_fluid_simulator.h"
@@ -32,4 +32,4 @@ private:
   FluidDisplayWidget *display_;
 };
 
-#endif // MAINWINDOW_H
+#endif // MAIN_WINDOW_H

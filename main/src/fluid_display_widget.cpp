@@ -1,7 +1,6 @@
 #include "fluid_display_widget.h"
 
 #include <QCoreApplication>
-#include <QGraphicsPixmapItem>
 #include <QGraphicsView>
 #include <QGraphicsWidget>
 #include <QHBoxLayout>
@@ -71,8 +70,7 @@ void FluidDisplayWidget::SimulatorUpdated(const FluidSimulator2D *simulator) {
 
   // Write to buffer
   QPainter painter(scene_image_buffer_);
-
-  painter.fillRect(0, 0, sim_x * tile_x, sim_y * tile_y, QColorConstants::Black);
+  painter.fillRect(scene_image_buffer_->rect(), QColorConstants::Black);
   if (show_density_) {
     const float *src = simulator->Density().data();
     for (auto y = 1; y < sim_y - 1; ++y) {
@@ -80,10 +78,10 @@ void FluidDisplayWidget::SimulatorUpdated(const FluidSimulator2D *simulator) {
         auto idx = y * sim_x + x;
         auto dst = (uint8_t) (std::fminf(255.0f,
                                          std::fmaxf(0.0f, std::roundf(src[idx] * 255.0f))));
-        painter.fillRect(tile_x * x,
-                         tile_y * y,
-                         tile_x,
-                         tile_y,
+        painter.fillRect((int32_t) tile_x * x,
+                         (int32_t) tile_y * y,
+                         (int32_t) tile_x,
+                         (int32_t) tile_y,
                          QColor::fromRgb(dst, dst, dst, 255));
       }
     }
@@ -102,10 +100,10 @@ void FluidDisplayWidget::SimulatorUpdated(const FluidSimulator2D *simulator) {
       for (auto x = 0; x < sim_x; ++x) {
         auto vx = vel_x[i];
         auto vy = vel_y[i];
-        auto start_x = tile_x * (x + 0.5f);
-        auto start_y = tile_y * (y + 0.5f);
-        auto end_x = tile_x * (x + 0.5f + vx);
-        auto end_y = tile_y * (y + 0.5f + vy);
+        auto start_x = (float) tile_x * ((float) x + 0.5f);
+        auto start_y = (float) tile_y * ((float) y + 0.5f);
+        auto end_x = (float) tile_x * ((float) x + 0.5f + vx);
+        auto end_y = (float) tile_y * ((float) y + 0.5f + vy);
 
         auto vec_x = (end_x - start_x);
         auto vec_y = (end_y - start_y);
@@ -115,11 +113,14 @@ void FluidDisplayWidget::SimulatorUpdated(const FluidSimulator2D *simulator) {
         auto mid_x = start_x + (vec_x * 0.75f);
         auto mid_y = start_y + (vec_y * 0.75f);
 
-        painter.drawLine(start_x, start_y, mid_x, mid_y);
+        painter.drawLine((int32_t) std::roundf(start_x),
+                         (int32_t) std::roundf(start_y),
+                         (int32_t) std::roundf(mid_x),
+                         (int32_t) std::roundf(mid_y));
 
-        QPolygon arrowHead;
-        arrowHead << QPoint(mid_x + perp_x, mid_y + perp_y) << QPoint(end_x, end_y)
-                  << QPoint(mid_x - perp_x, mid_y - perp_y);
+        QPolygonF arrowHead;
+        arrowHead << QPointF(mid_x + perp_x, mid_y + perp_y) << QPointF(end_x, end_y)
+                  << QPointF(mid_x - perp_x, mid_y - perp_y);
         painter.drawConvexPolygon(arrowHead);
         ++i;
       }
@@ -152,20 +153,11 @@ void FluidDisplayWidget::mousePressEvent(QMouseEvent *event) {
   auto item = scene_->itemAt(scene_pos, QTransform());
   if (item) {
     if (event->button() == Qt::LeftButton) {
-      auto pct_x = scene_pos.x() / WIDTH;
-      auto pct_y = scene_pos.y() / HEIGHT;
-      emit RightClick(pct_x, pct_y);
+      auto pct_x = (float)(scene_pos.x() / WIDTH);
+      auto pct_y = (float)(scene_pos.y() / HEIGHT);
+      emit SpawnSource(pct_x, pct_y);
     }
   }
-  // What we need here is the grid size so we can convert into a grid X,Y
-  // But we don't own that, it's a simulator attribute.
-  // We could convert the mouse click to a percentile image position click
-  // and emit a signal and then have the MainWindow update the simulator.
-  // Seems good to me.
-
-  std::cout << "  mapped to scene " << scene_pos.x() << ", " << scene_pos.y() << std::endl;
-  //        mapFromScene();
-  // Convert the mouse coords to image coords in our thingo
 }
 
-FluidDisplayWidget::~FluidDisplayWidget() {}
+FluidDisplayWidget::~FluidDisplayWidget() = default;

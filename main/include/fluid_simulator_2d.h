@@ -2,33 +2,37 @@
 #define FLUID_SIMULATOR_2D_H
 
 #include "fluid_simulator.h"
+#include <map>
 
 class FluidSimulator2D : public FluidSimulator {
 public:
-  FluidSimulator2D(uint32_t dim_x, uint32_t dim_y);
+  [[maybe_unused]] FluidSimulator2D(uint32_t dim_x, uint32_t dim_y);
 
-  virtual void Simulate() = 0;
+  void Simulate() override = 0;
 
-  const uint32_t DimX() const { return dim_x_; }
+  [[nodiscard]] uint32_t DimX() const { return dim_x_; }
 
-  const uint32_t DimY() const { return dim_y_; }
+  [[nodiscard]] uint32_t DimY() const { return dim_y_; }
 
-  virtual const std::vector<float> &Density() const;
+  [[nodiscard]] const std::vector<float> &Density() const override;
 
-  virtual const std::vector<float> &VelocityX() const;
+  [[nodiscard]] virtual const std::vector<float> &VelocityX() const;
 
-  virtual const std::vector<float> &VelocityY() const;
+  [[nodiscard]] virtual const std::vector<float> &VelocityY() const;
 
   virtual void AddDensity(uint32_t x, uint32_t y, float amount);
 
-  virtual void Initialise();
+  [[maybe_unused]] void AddSource(uint32_t x, uint32_t y, float amount, float velocity_x, float velocity_y);
+
+  [[maybe_unused]] void ClearSources();
+
+  [[maybe_unused]] void RemoveSource(uint32_t x, uint32_t y);
 
 protected:
-  inline uint32_t Index(uint32_t x, uint32_t y) const { return y * dim_x_ + x; };
+  [[maybe_unused]] void ProcessSources();
 
-  virtual void InitialiseDensity() {};
+  [[nodiscard]] inline uint32_t Index(uint32_t x, uint32_t y) const { return y * dim_x_ + x; };
 
-  virtual void InitialiseVelocity() {};
   uint32_t dim_x_;
   uint32_t dim_y_;
   uint32_t num_cells_;
@@ -38,6 +42,8 @@ protected:
 
 private:
   void AllocateStorage();
+
+  std::map<uint32_t, std::tuple<float, float, float>> sources_;
 };
 
 #endif // FLUID_SIMULATOR_2D_H

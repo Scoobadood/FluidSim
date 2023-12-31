@@ -1,5 +1,5 @@
-#ifndef CONTROLPANELWIDGET_H
-#define CONTROLPANELWIDGET_H
+#ifndef CONTROL_PANEL_WIDGET_H
+#define CONTROL_PANEL_WIDGET_H
 
 #include <QCheckBox>
 #include <QPushButton>
@@ -12,18 +12,20 @@ public:
   explicit ControlPanelWidget(QWidget *parent = nullptr);
 
 signals:
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "NotImplementedFunctions"
+    void Start();
 
-  void Start();
+    void Stop();
 
-  void Stop();
+    void Step();
 
-  void Step();
+    void Reset();
 
-  void Reset();
+    void ShowDensity(bool);
 
-  void ShowDensity(bool);
-
-  void ShowVelocity(bool);
+    void ShowVelocity(bool);
+#pragma clang diagnostic pop
 
 private:
   void HandleStartStopButton();
@@ -43,4 +45,4 @@ private:
   QCheckBox *velocity_checkbox_;
 };
 
-#endif // CONTROLPANELWIDGET_H
+#endif // CONTROL_PANEL_WIDGET_H

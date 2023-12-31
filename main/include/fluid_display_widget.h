@@ -11,15 +11,20 @@ class FluidDisplayWidget : public QWidget {
 Q_OBJECT
 
 public:
-  FluidDisplayWidget(QWidget *parent = nullptr);
+  explicit FluidDisplayWidget(QWidget *parent = nullptr);
 
-  ~FluidDisplayWidget();
+  ~FluidDisplayWidget() override;
 
   void mousePressEvent(QMouseEvent *event) override;
 
 signals:
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "NotImplementedFunctions"
 
-  void RightClick(float px, float py);
+  void SpawnSource(float px, float py);
+
+#pragma clang diagnostic pop
+
 
 public slots:
 
