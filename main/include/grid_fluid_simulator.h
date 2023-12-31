@@ -16,10 +16,6 @@ public:
 
   void Simulate() override;
 
-  void InitialiseDensity();
-
-  void InitialiseVelocity();
-
 protected:
   void Diffuse(const std::vector<float> &current_density, std::vector<float> &next_density);
 
@@ -32,10 +28,15 @@ protected:
                       std::vector<float>& advected_velocity_y) const;
   void CorrectBoundaryVelocities(std::vector<float>& velocity_x,
                                  std::vector<float>& velocity_y) const;
+  void CorrectBoundaryDensities(std::vector<float>& densities) const;
 
   float delta_t_;
 
 private:
+  void InitialiseDensity();
+
+  void InitialiseVelocity();
+
   [[nodiscard]] float AdvectValue(const std::vector<float> &velocity_x,
                     const std::vector<float> &velocity_y,
                     const std::vector<float> &source_data,
@@ -49,7 +50,6 @@ private:
                         std::vector<float> &curl_x,
                         std::vector<float> &curl_y) const;
 
-  void CorrectBoundaryDensities(std::vector<float>& densities) const;
 
   static inline float Lerp(float from, float to, float pct) { return from + pct * (to - from); }
 

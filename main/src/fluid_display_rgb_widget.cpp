@@ -168,7 +168,7 @@ void FluidDisplayRGBWidget::mousePressEvent(QMouseEvent *event)
         if (event->button() == Qt::LeftButton) {
             auto pct_x = scene_pos.x() / WIDTH;
             auto pct_y = scene_pos.y() / HEIGHT;
-            emit RightClick(pct_x, pct_y);
+            emit SpawnSource(pct_x, pct_y);
         }
     }
     // What we need here is the grid size so we can convert into a grid X,Y

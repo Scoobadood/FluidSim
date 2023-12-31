@@ -15,7 +15,8 @@ GridFluidRGBSimulator::GridFluidRGBSimulator(uint32_t width,      //
         , density_g_(num_cells_, 0)                                   //
         , density_b_(num_cells_, 0)                                   //
 {
-  Initialise();
+  InitialiseDensity();
+  InitialiseVelocity();
 }
 
 void GridFluidRGBSimulator::InitialiseDensity() {
@@ -73,23 +74,11 @@ void GridFluidRGBSimulator::InitialiseVelocity() {
 
 void GridFluidRGBSimulator::Simulate() {
 
-  auto i = 0;
-  for (auto &e: source_) {
-    auto idx = e.first;
-    auto amt = std::get<0>(e.second);
-    auto vx = std::get<1>(e.second);
-    auto vy = std::get<2>(e.second);
-    if (i % 3 == 0)
-      density_.at(idx) = amt;
-    else if (i % 3 == 1)
-      density_g_.at(idx) = amt;
-    else if (i % 3 == 2)
-      density_b_.at(idx) = amt;
-
-    velocity_x_.at(idx) = vx;
-    velocity_y_.at(idx) = vy;
-    ++i;
-  }
+  ProcessSources();
+  CorrectBoundaryVelocities(velocity_x_, velocity_y_);
+  CorrectBoundaryDensities(density_);
+  CorrectBoundaryDensities(density_g_);
+  CorrectBoundaryDensities(density_b_);
 
   std::vector<float> temp_density(num_cells_, 0);
   std::vector<float> temp_velocity_x(num_cells_, 0);

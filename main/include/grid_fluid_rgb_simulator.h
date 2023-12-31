@@ -14,17 +14,17 @@ public:
                         float diffusion_rate //
   );
 
-  const std::vector<float> &DensityGreen() const;
+  [[nodiscard]] const std::vector<float> &DensityGreen() const;
 
-  const std::vector<float> &DensityBlue() const;
-
-  void InitialiseDensity() override;
-
-  void InitialiseVelocity() override;
+  [[nodiscard]] const std::vector<float> &DensityBlue() const;
 
   void Simulate() override;
 
+  void InitialiseDensity();
+
+  void InitialiseVelocity();
 private:
+
   std::vector<float> density_g_;
   std::vector<float> density_b_;
   std::vector<float> source_r_;

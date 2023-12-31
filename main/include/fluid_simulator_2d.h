@@ -20,7 +20,7 @@ public:
 
   [[nodiscard]] virtual const std::vector<float> &VelocityY() const;
 
-  virtual void AddDensity(uint32_t x, uint32_t y, float amount);
+  [[maybe_unused]] virtual void AddDensity(uint32_t x, uint32_t y, float amount);
 
   [[maybe_unused]] void AddSource(uint32_t x, uint32_t y, float amount, float velocity_x, float velocity_y);
 
@@ -40,7 +40,7 @@ protected:
   std::vector<float> velocity_x_;
   std::vector<float> velocity_y_;
 
-  std::map<uint32_t, std::tuple<float, float, float>> source_;
+  std::map<uint32_t, std::tuple<float, float, float>> sources_;
 
 private:
   void AllocateStorage();

@@ -12,12 +12,12 @@ class FluidDisplayRGBWidget : public QWidget
   Q_OBJECT
 
 public:
-  FluidDisplayRGBWidget(QWidget *parent = nullptr);
-  ~FluidDisplayRGBWidget();
+  explicit FluidDisplayRGBWidget(QWidget *parent = nullptr);
+  ~FluidDisplayRGBWidget() override;
   void mousePressEvent(QMouseEvent *event) override;
 
 signals:
-  void RightClick(float px, float py);
+  void SpawnSource(float px, float py);
 
 public slots:
     void SimulatorUpdated(const FluidSimulator2D *simulator);
