@@ -25,17 +25,21 @@ protected:
 
   void SuppressDivergence();
 
-private:
-  [[nodiscard]] float AdvectValue(const std::vector<float> &velocity_x,
-                    const std::vector<float> &velocity_y,
-                    const std::vector<float> &source_data,
-                    uint32_t x, uint32_t y) const;
-
   void AdvectDensity(const std::vector<float> &curr_density,
                      std::vector<float> &next_density) const;
 
   void AdvectVelocity(std::vector<float>& advected_velocity_x,
                       std::vector<float>& advected_velocity_y) const;
+  void CorrectBoundaryVelocities(std::vector<float>& velocity_x,
+                                 std::vector<float>& velocity_y) const;
+
+  float delta_t_;
+
+private:
+  [[nodiscard]] float AdvectValue(const std::vector<float> &velocity_x,
+                    const std::vector<float> &velocity_y,
+                    const std::vector<float> &source_data,
+                    uint32_t x, uint32_t y) const;
 
   void ComputeDivergence(std::vector<float> &divergence) const;
 
@@ -47,12 +51,8 @@ private:
 
   void CorrectBoundaryDensities(std::vector<float>& densities) const;
 
-  void CorrectBoundaryVelocities(std::vector<float>& velocity_x,
-                                 std::vector<float>& velocity_y) const;
-
   static inline float Lerp(float from, float to, float pct) { return from + pct * (to - from); }
 
-  float delta_t_;
   float diffusion_rate_;
 };
 

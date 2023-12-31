@@ -36,6 +36,11 @@ void FluidSimulator2D::AddDensity(uint32_t x, uint32_t y, float amount) {
   density_.at(Index(x, y)) += amount;
 }
 
+void FluidSimulator2D::AddSource(uint32_t x, uint32_t y, float amount, float velocity_x, float velocity_y){
+  auto idx = Index(x,y);
+  source_[idx] = {amount, velocity_x, velocity_y};
+}
+
 [[maybe_unused]] void FluidSimulator2D::AddSource(uint32_t x, uint32_t y, float amount, float velocity_x, float velocity_y) {
   sources_[Index(x, y)] = {amount, velocity_x, velocity_y};
 }

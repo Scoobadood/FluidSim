@@ -1,10 +1,10 @@
 #include "main_window.h"
 #include "control_panel_widget.h"
-#include "fluid_display_widget.h"
+#include "fluid_display_rgb_widget.h"
 
 #include <QDockWidget>
 
-const uint32_t SIM_GRID_SIZE = 64;
+const uint32_t SIM_GRID_SIZE = 128;
 
 MainWindow::MainWindow(QWidget *parent)
         : QMainWindow{parent}  //
@@ -17,10 +17,10 @@ MainWindow::MainWindow(QWidget *parent)
   dock->setWidget(control_panel);
   addDockWidget(Qt::TopDockWidgetArea, dock);
 
-  fluid_sim_ = new GridFluidSimulator(SIM_GRID_SIZE, SIM_GRID_SIZE, 1.0f / 15.0f, 0.2f);
+  fluid_sim_ = new GridFluidRGBSimulator(SIM_GRID_SIZE, SIM_GRID_SIZE, 1.0f / 15.0f, 0.8f);
 
   // Add some central content to the main window
-  display_ = new FluidDisplayWidget(this);
+  display_ = new FluidDisplayRGBWidget(this);
   setCentralWidget(display_);
 
   connect(control_panel, &ControlPanelWidget::Start, this, &MainWindow::StartSim);
@@ -35,7 +35,7 @@ MainWindow::MainWindow(QWidget *parent)
     display_->ShowVelocityField(show);
     StepSim();
   });
-  connect(display_, &FluidDisplayWidget::SpawnSource, this, &MainWindow::HandleRightClick);
+  connect(display_, &FluidDisplayRGBWidget::SpawnSource, this, &MainWindow::HandleRightClick);
 }
 
 void MainWindow::StepSim() {
@@ -64,7 +64,7 @@ void MainWindow::StartSim() {
   connect(sim_thread_,
           &FluidSimulatorThread::SimulationUpdated,
           display_,
-          &FluidDisplayWidget::SimulatorUpdated,
+          &FluidDisplayRGBWidget::SimulatorUpdated,
           Qt::DirectConnection);
   sim_thread_->start();
 }
@@ -75,14 +75,16 @@ void MainWindow::StopSim() {
   disconnect(sim_thread_,
              &FluidSimulatorThread::SimulationUpdated,
              display_,
-             &FluidDisplayWidget::SimulatorUpdated);
+             &FluidDisplayRGBWidget::SimulatorUpdated);
 
   sim_thread_->requestInterruption();
   sim_thread_->wait();
 }
 
 void MainWindow::HandleRightClick(float px, float py) {
-  auto x = (uint32_t) std::roundf(px * (float)fluid_sim_->DimX());
-  auto y = (uint32_t) std::roundf(py * (float)fluid_sim_->DimY());
-  fluid_sim_->AddDensity(x, y, 0.5f);
+  auto x = (uint32_t) std::round(px * fluid_sim_->DimX());
+  auto y = (uint32_t) std::round(py * fluid_sim_->DimY());
+  auto vx = (px-0.5f) * -12.0f;
+  auto vy = (py-0.5f) * -12.0f;
+  fluid_sim_->AddSource(x, y, 1.0f, vx, vy);
 }

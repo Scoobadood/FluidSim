@@ -1,8 +1,8 @@
 #ifndef FLUID_SIMULATOR_2D_H
 #define FLUID_SIMULATOR_2D_H
 
-#include "fluid_simulator.h"
 #include <map>
+#include "fluid_simulator.h"
 
 class FluidSimulator2D : public FluidSimulator {
 public:
@@ -40,10 +40,10 @@ protected:
   std::vector<float> velocity_x_;
   std::vector<float> velocity_y_;
 
+  std::map<uint32_t, std::tuple<float, float, float>> source_;
+
 private:
   void AllocateStorage();
-
-  std::map<uint32_t, std::tuple<float, float, float>> sources_;
 };
 
 #endif // FLUID_SIMULATOR_2D_H

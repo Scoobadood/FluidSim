@@ -1,8 +1,8 @@
 #ifndef MAIN_WINDOW_H
 #define MAIN_WINDOW_H
 
-#include "fluid_display_widget.h"
-#include "grid_fluid_simulator.h"
+#include "fluid_display_rgb_widget.h"
+#include "grid_fluid_rgb_simulator.h"
 #include "fluid_simulator_thread.h"
 
 #include <QMainWindow>
@@ -28,8 +28,8 @@ public slots:
 protected:
 private:
   FluidSimulatorThread *sim_thread_;
-  GridFluidSimulator *fluid_sim_;
-  FluidDisplayWidget *display_;
+  GridFluidRGBSimulator *fluid_sim_;
+  FluidDisplayRGBWidget *display_;
 };
 
 #endif // MAIN_WINDOW_H

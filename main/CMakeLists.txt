@@ -7,6 +7,7 @@ qt_add_executable(FluidSim
 
         # Ui
         include/fluid_display_widget.h src/fluid_display_widget.cpp
+        include/fluid_display_rgb_widget.h src/fluid_display_rgb_widget.cpp
         include/fluid_simulator_thread.h src/fluid_simulator_thread.cpp
         include/main_window.h src/main_window.cpp
         include/control_panel_widget.h src/control_panel_widget.cpp
@@ -15,6 +16,7 @@ qt_add_executable(FluidSim
         include/fluid_simulator.h
         include/fluid_simulator_2d.h src/fluid_simulator_2d.cpp
         include/grid_fluid_simulator.h src/grid_fluid_simulator.cpp
+        include/grid_fluid_rgb_simulator.h src/grid_fluid_rgb_simulator.cpp
 )
 
 target_link_libraries(FluidSim PRIVATE

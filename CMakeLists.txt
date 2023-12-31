@@ -2,17 +2,13 @@ cmake_minimum_required(VERSION 3.5)
 
 project(FluidSim VERSION 0.1 LANGUAGES CXX)
 
-list(APPEND CMAKE_PREFIX_PATH "/Users/dave/Qt/6.6.0/macos")
-
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# ------------------------------------------------------------------------------
-# Qt6
 find_package(Qt6 REQUIRED
     COMPONENTS
     Widgets
@@ -22,7 +18,6 @@ if(NOT Qt6_FOUND)
     message(FATAL_ERROR "Qt6 not found. Please make sure Qt6 is installed and CMake can locate it.")
 endif()
 
-# ------------------------------------------------------------------------------
 
 
 include(FetchContent)
