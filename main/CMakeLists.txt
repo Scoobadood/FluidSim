@@ -15,6 +15,7 @@ qt_add_executable(FluidSim
         include/fluid_simulator.h
         include/fluid_simulator_2d.h src/fluid_simulator_2d.cpp
         include/grid_fluid_simulator.h src/grid_fluid_simulator.cpp
+        include/jos_stam_simulator_2d.h src/jos_stam_simulator_2d.cpp
 )
 
 target_link_libraries(FluidSim PRIVATE

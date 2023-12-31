@@ -4,7 +4,7 @@
 
 #include <QDockWidget>
 
-const uint32_t SIM_GRID_SIZE = 64;
+const uint32_t SIM_GRID_SIZE = 128;
 
 MainWindow::MainWindow(QWidget *parent)
         : QMainWindow{parent}  //
@@ -35,7 +35,7 @@ MainWindow::MainWindow(QWidget *parent)
     display_->ShowVelocityField(show);
     StepSim();
   });
-  connect(display_, &FluidDisplayWidget::SpawnSource, this, &MainWindow::HandleRightClick);
+  connect(display_, &FluidDisplayWidget::SpawnSource, this, &MainWindow::HandleClick);
 }
 
 void MainWindow::StepSim() {
@@ -50,6 +50,7 @@ void MainWindow::StepSim() {
 void MainWindow::ResetSim() {
   if (sim_thread_ != nullptr && sim_thread_->isRunning())
     return;
+  fluid_sim_->ClearSources();
   fluid_sim_->InitialiseDensity();
   fluid_sim_->InitialiseVelocity();
   display_->SimulatorUpdated(fluid_sim_);
@@ -81,8 +82,8 @@ void MainWindow::StopSim() {
   sim_thread_->wait();
 }
 
-void MainWindow::HandleRightClick(float px, float py) {
+void MainWindow::HandleClick(float px, float py) {
   auto x = (uint32_t) std::roundf(px * (float)fluid_sim_->DimX());
   auto y = (uint32_t) std::roundf(py * (float)fluid_sim_->DimY());
-  fluid_sim_->AddDensity(x, y, 0.5f);
+  fluid_sim_->AddSource(x, y, 1.0f, (0.5f - px) * fluid_sim_->DimX() * 0.2f, (0.5f - py) * 0.2f * fluid_sim_->DimY());
 }

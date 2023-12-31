@@ -23,7 +23,7 @@ public slots:
 
   void StopSim();
 
-  void HandleRightClick(float px, float py);
+  void HandleClick(float px, float py);
 
 protected:
 private:

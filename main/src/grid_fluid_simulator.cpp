@@ -255,19 +255,19 @@ void GridFluidSimulator::CorrectBoundaryVelocities(std::vector<float> &velocity_
   for (auto x = 1; x < dim_x_ - 1; ++x) {
     // Top
     velocity_x.at(Index(x, 0)) = velocity_x.at(Index(x, 1));
-    velocity_y.at(Index(x, 0)) = -velocity_y.at(Index(x, 1));
+    velocity_y.at(Index(x, 0)) = 0; //-velocity_y.at(Index(x, 1));
 
     // Bottom
     velocity_x.at(Index(x, dim_y_ - 1)) = velocity_x.at(Index(x, dim_y_ - 2));
-    velocity_y.at(Index(x, dim_y_ - 1)) = -velocity_y.at(Index(x, dim_y_ - 2));
+    velocity_y.at(Index(x, dim_y_ - 1)) = 0; //-velocity_y.at(Index(x, dim_y_ - 2));
   }
   // Vertical boundaries
   for (auto y = 1; y < dim_y_ - 1; ++y) {
     // Left
-    velocity_x.at(Index(0, y)) = -velocity_x.at(Index(1, y));
+    velocity_x.at(Index(0, y)) = 0; //-velocity_x.at(Index(1, y));
     velocity_y.at(Index(0, y)) = velocity_y.at(Index(1, y));
     // Right
-    velocity_x.at(Index(dim_x_ - 1, y)) = -velocity_x.at(Index(dim_x_ - 2, y));
+    velocity_x.at(Index(dim_x_ - 1, y)) = 0; //-velocity_x.at(Index(dim_x_ - 2, y));
     velocity_y.at(Index(dim_x_ - 1, y)) = velocity_y.at(Index(dim_x_ - 2, y));
   }
   velocity_x.at(Index(0, 0)) = 0.5f * (velocity_x.at(Index(1, 0)) + velocity_x.at(Index(0, 1)));
