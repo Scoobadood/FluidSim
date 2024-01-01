@@ -2,46 +2,14 @@
 
 #include "main.h"
 
-#include "scene_data.h"
 #include "spdlog/cfg/env.h"
 #include "glm/ext/matrix_clip_space.hpp"
 #include "glm/ext/matrix_transform.hpp"
 #include "gl_common.h"
 #include "shader.h"
-
-/*
- *     // Left face
-    vertex_data.insert(vertex_data.end(), {min_x, max_y, max_z, -1, 0, 0});
-    vertex_data.insert(vertex_data.end(), {min_x, max_y, min_z, -1, 0, 0});
-    vertex_data.insert(vertex_data.end(), {min_x, min_y, min_z, -1, 0, 0});
-    vertex_data.insert(vertex_data.end(), {min_x, min_y, max_z, -1, 0, 0});
-    // Front face
-    vertex_data.insert(vertex_data.end(), {min_x, max_y, min_z, 0, 0, -1});
-    vertex_data.insert(vertex_data.end(), {max_x, max_y, min_z, 0, 0, -1});
-    vertex_data.insert(vertex_data.end(), {max_x, min_y, min_z, 0, 0, -1});
-    vertex_data.insert(vertex_data.end(), {min_x, min_y, min_z, 0, 0, -1});
-    // Right face
-    vertex_data.insert(vertex_data.end(), {max_x, max_y, min_z, 1, 0, 0});
-    vertex_data.insert(vertex_data.end(), {max_x, max_y, max_z, 1, 0, 0});
-    vertex_data.insert(vertex_data.end(), {max_x, min_y, max_z, 1, 0, 0});
-    vertex_data.insert(vertex_data.end(), {max_x, min_y, min_z, 1, 0, 0});
-    // Back face
-    vertex_data.insert(vertex_data.end(), {max_x, max_y, max_z, 0, 0, 1});
-    vertex_data.insert(vertex_data.end(), {min_x, max_y, max_z, 0, 0, 1});
-    vertex_data.insert(vertex_data.end(), {min_x, min_y, max_z, 0, 0, 1});
-    vertex_data.insert(vertex_data.end(), {max_x, min_y, max_z, 0, 0, 1});
-    // Top face
-    vertex_data.insert(vertex_data.end(), {min_x, max_y, max_z, 0, 1, 0});
-    vertex_data.insert(vertex_data.end(), {max_x, max_y, max_z, 0, 1, 0});
-    vertex_data.insert(vertex_data.end(), {max_x, max_y, min_z, 0, 1, 0});
-    vertex_data.insert(vertex_data.end(), {min_x, max_y, min_z, 0, 1, 0});
-    // Bottom face
-    vertex_data.insert(vertex_data.end(), {min_x, min_y, min_z, 0, -1, 0});
-    vertex_data.insert(vertex_data.end(), {max_x, min_y, min_z, 0, -1, 0});
-    vertex_data.insert(vertex_data.end(), {max_x, min_y, max_z, 0, -1, 0});
-    vertex_data.insert(vertex_data.end(), {min_x, min_y, max_z, 0, -1, 0});
-
- */
+#include "glm/detail/type_quat.hpp"
+#include "glm/gtc/quaternion.hpp"
+#include "trackball.h"
 
 const int32_t POS_ATTR = 0;
 const int32_t NORM_ATTR = 1;
@@ -58,8 +26,73 @@ throw std::runtime_error("GLR"); \
 
 
 /* ******************************************************************************************
+ *
  *  Handlers for GLFW
+ *
  * ******************************************************************************************/
+
+glm::vec<3, double> g_drag_start_p;
+bool g_mouse_dragging = false;
+glm::mat4 g_model_rot(1);
+glm::dquat g_start_quat;
+Trackball g_trackball{200.0f};
+
+/*
+ * Given a point on the screen, map it onto the sphere which projects
+ * onto the screen.
+ */
+glm::vec<3, double> point_to_sphere(GLFWwindow *window, double xpos, double ypos) {
+  int width, height;
+  glfwGetWindowSize(window, &width, &height);
+
+  float half_height = (float) height / 2.0f;
+  float half_width = (float) width / 2.0f;
+  float radius = std::fminf(half_height, half_width);
+  auto px = (xpos - half_width) / radius;
+  auto py = (half_height - ypos) / radius;
+  double pz = 0.0;
+  auto r2 = px * px + py * py;
+  if (r2 > 1) {
+    auto scale = 1.0 / std::sqrt(r2);
+    px *= scale;
+    py *= scale;
+  } else {
+    pz = std::sqrt(1.0 - r2);
+  }
+  return glm::normalize(glm::vec3(px, py, pz));
+}
+
+
+void mouse_button_callback(GLFWwindow *window, int button, int action, __attribute__((unused)) int mods) {
+  if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS) {
+    g_mouse_dragging = true;
+    double mx, my;
+    glfwGetCursorPos(window, &mx, &my);
+
+    g_drag_start_p = point_to_sphere(window, mx, my);
+    g_start_quat = glm::quat_cast(g_model_rot);
+
+  } else if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_RELEASE) {
+    g_mouse_dragging = false;
+  }
+}
+
+void mouse_move_callback(GLFWwindow *window, double xpos, double ypos) {
+  if (!g_mouse_dragging) return;
+
+  auto p = point_to_sphere(window, xpos, ypos);
+  auto q_xyz = glm::cross(g_drag_start_p, p);
+  auto q_w = glm::dot(g_drag_start_p, p);
+
+  double s = std::sqrt((1.0f + q_w) * 2.0f);
+  glm::dquat q_xform(0.5 * s, q_xyz / s);
+
+  auto q_now = g_start_quat * q_xform;
+  q_now /= length(q_now);
+
+  g_model_rot = glm::mat4_cast(q_now);
+}
+
 
 void idle_handler() {}
 
@@ -104,7 +137,7 @@ GLFWwindow *initialise() {
 
 /* ******************************************************************************************
  *  Generate the geometry for the scene.
- *  We will have N columns, each of which is WxD cross section and H[n] high
+ *  We will have N columns, each of which is WxD cross-section and H[n] high
  *  The columns will be adjacent and centred on the origin.
  * ******************************************************************************************/
 void generate_geometry(float width, float depth, const std::vector<float> &heights,
@@ -192,14 +225,14 @@ void create_geometry(std::vector<float> &col_heights, float col_width, float col
   glBindVertexArray(vao);
 
   auto bytes_per_vertex = 4 * (3 + 3); // No textures yet
-  num_elements = index_data.size();
+  num_elements = (GLsizei) index_data.size();
 
   // Vertex locations
   glGenBuffers(1, &vbo);
   glGenBuffers(1, &ebo);
 
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
-  glBufferData(GL_ARRAY_BUFFER, vertex_data.size() * sizeof(float), vertex_data.data(), GL_STATIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr) (vertex_data.size() * sizeof(float)), vertex_data.data(), GL_STATIC_DRAW);
   glEnableVertexAttribArray(POS_ATTR);
   glVertexAttribPointer(POS_ATTR, 3, GL_FLOAT, GL_FALSE, bytes_per_vertex, (GLvoid *)
           nullptr);
@@ -213,9 +246,10 @@ void create_geometry(std::vector<float> &col_heights, float col_width, float col
 //    glVertexAttribPointer(tx_attr, 2, GL_FLOAT, GL_FALSE, vtx_sz, (GLvoid *) 24);
 
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, index_data.size() * sizeof(uint32_t), index_data.data(), GL_STATIC_DRAW);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr) (index_data.size() * sizeof(uint32_t)), index_data.data(),
+               GL_STATIC_DRAW);
 
-  CHECK_GL_ERROR("create geometry");
+  CHECK_GL_ERROR("create geometry")
 }
 
 void reload_geometry(GLuint vao, GLuint vbo, std::vector<float> &new_heights, float col_width, float col_depth) {
@@ -226,13 +260,13 @@ void reload_geometry(GLuint vao, GLuint vbo, std::vector<float> &new_heights, fl
 
   glBindVertexArray(vao);
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
-  glBufferData(GL_ARRAY_BUFFER, vertex_data.size() * sizeof(float), vertex_data.data(), GL_STATIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr) (vertex_data.size() * sizeof(float)), vertex_data.data(), GL_STATIC_DRAW);
 
 // Normals and textures
 ///    glEnableVertexAttribArray(tx_attr);
 //    glVertexAttribPointer(tx_attr, 2, GL_FLOAT, GL_FALSE, vtx_sz, (GLvoid *) 24);
 
-  CHECK_GL_ERROR("regenerate geometry");
+  CHECK_GL_ERROR("regenerate geometry")
 }
 
 
@@ -243,8 +277,8 @@ std::vector<float> init_height_field(uint32_t num_columns) {
   std::vector<float> heights;
 
   heights.reserve(num_columns);
-  auto theta = -M_PI;
-  auto d_theta = (2 * (float) M_PI) / (float)num_columns;
+  auto theta = -(float) M_PI;
+  auto d_theta = (2 * (float) M_PI) / (float) num_columns;
   for (auto i = 0; i < num_columns; ++i) {
     heights.push_back(1.1f + std::cosf(theta));
     theta += d_theta;
@@ -253,23 +287,25 @@ std::vector<float> init_height_field(uint32_t num_columns) {
   return heights;
 }
 
-void adjust_height_field(std::vector<float>& heights, std::vector<float>& v_height) {
+void adjust_height_field(std::vector<float> &heights, std::vector<float> &v_height) {
   for (auto i = 0; i < v_height.size(); ++i) {
-    auto l = (i>0) ? heights[i-1] : heights[i];
-    auto r = (i<heights.size()-1) ? heights[i+1] : heights[i];
+    auto l = (i > 0) ? heights[i - 1] : heights[i];
+    auto r = (i < heights.size() - 1) ? heights[i + 1] : heights[i];
 
     v_height[i] += ((l + r) * 0.5f - heights[i]);
     v_height[i] *= 0.99f;
   }
-  for( auto  i=0; i< heights.size(); ++i) {
+  for (auto i = 0; i < heights.size(); ++i) {
     heights[i] += v_height[i];
   }
 }
 
-/*
- * Main
- */
-int main(int argc, char *argv[]) {
+/* ******************************************************************************************
+ *
+ *  Main
+ *
+ * ******************************************************************************************/
+int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[]) {
   spdlog::cfg::load_env_levels();
 
   GLFWwindow *window;
@@ -282,13 +318,19 @@ int main(int argc, char *argv[]) {
   glfwSwapInterval(1); // Enable vsync
 
   //
+  // Set up callbacks
+  //
+  glfwSetMouseButtonCallback(window, mouse_button_callback);
+  glfwSetCursorPosCallback(window, mouse_move_callback);
+
+  //
   // Create initial geometry
   //
   GLuint vao, vbo, ebo;
   GLsizei num_elements;
 
   auto heights = init_height_field(20);
-  std::vector<float> v_height(20,0);
+  std::vector<float> v_height(20, 0);
   auto col_width = 0.25f;
   auto col_depth = 0.25f;
   create_geometry(heights, col_width, col_depth, vao, vbo, ebo, num_elements);
@@ -298,8 +340,9 @@ int main(int argc, char *argv[]) {
   //
   auto shader = Shader::from_files("/Users/dave/Projects/FluidSim/renderer/pool/shaders/lighting.vert",
                                    "/Users/dave/Projects/FluidSim/renderer/pool/shaders/lighting.frag");
-  CHECK_GL_ERROR("Create shader");
+  CHECK_GL_ERROR("Create shader")
 
+//  g_cam_rot = glm::rotate(g_cam_rot, (float) M_PI_2, glm::vec3(0, 1, 0));
   while (!glfwWindowShouldClose(window)) {
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
@@ -307,7 +350,6 @@ int main(int argc, char *argv[]) {
     glViewport(0, 0, width, height);
 
     glm::mat4 project = glm::perspective(glm::radians(35.0f), ratio, 0.1f, 35.0f);
-
 
     //
     // Main render loop
@@ -322,11 +364,11 @@ int main(int argc, char *argv[]) {
 
     // Update view
     glm::mat4 view{1};
-    view = glm::translate(view, glm::vec3(0, -3, -15));
-    view = glm::rotate(view, (float) M_PI_2, glm::vec3(0, 1, 0));
+    view = glm::translate(view, glm::vec3(0, 0, -15));
+
     glm::mat4 model = glm::mat4(1.0);
 //  model = glm::translate(model,glm::vec3(0,0,-10));
-    model = glm::rotate(model, (float)M_PI_2, glm::vec3(0, 1, 0));
+    model = model * g_model_rot;
 
     shader->use();
     shader->set_uniform("project", project);
@@ -344,7 +386,7 @@ int main(int argc, char *argv[]) {
 
 
     glDrawElements(GL_TRIANGLES, num_elements, GL_UNSIGNED_INT, (void *) nullptr);
-    CHECK_GL_ERROR("Render");
+    CHECK_GL_ERROR("Render")
 
     //
     // Update geometry
@@ -362,5 +404,4 @@ int main(int argc, char *argv[]) {
 
   glfwTerminate();
   return 0;
-
 }
