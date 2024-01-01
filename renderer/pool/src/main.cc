@@ -35,7 +35,6 @@ glm::vec<3, double> g_drag_start_p;
 bool g_mouse_dragging = false;
 glm::mat4 g_model_rot(1);
 glm::dquat g_start_quat;
-Trackball g_trackball{200.0f};
 
 /*
  * Given a point on the screen, map it onto the sphere which projects
