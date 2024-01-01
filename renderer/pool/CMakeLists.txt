@@ -8,8 +8,6 @@ FetchContent_MakeAvailable(glfw)
 
 add_executable(test_glfw
         src/main.cc include/main.h
-        include/keyboard_handler.h src/keyboard_handler.cc
-        include/scene.h src/scene.cc
         include/scene_data.h
 )
 
