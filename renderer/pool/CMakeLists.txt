@@ -8,7 +8,9 @@ FetchContent_MakeAvailable(glfw)
 
 add_executable(test_glfw
         src/main.cc include/main.h
-        )
+        include/keyboard_handler.h src/keyboard_handler.cc
+        include/scene.h src/scene.cc
+)
 
 target_include_directories(test_glfw
         PRIVATE
