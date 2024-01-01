@@ -11,6 +11,7 @@
 class Scene {
 public:
   Scene();
+  void SetAspectRatio(float aspect_ratio);
   void Render();
 
 private:

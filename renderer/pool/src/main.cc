@@ -6,6 +6,7 @@
 
 #include "keyboard_handler.h"
 #include "scene.h"
+#include "spdlog/cfg/env.h"
 
 void mouse_handler(GLFWwindow *window, int button, int action, int mods) {}
 
@@ -13,9 +14,14 @@ void drag_handler(int32_t x, int32_t y) {}
 
 void mouse_motion_handler(int32_t x, int32_t y) {}
 
-void framebuffer_size_callback(GLFWwindow *window, int32_t width, int32_t height) {}
+void framebuffer_size_callback(GLFWwindow *window, int32_t width, int32_t height) {
+  auto ratio = (float) width / (float) height;
+  glViewport(0, 0, width, height);
+  ((Scene *) glfwGetWindowUserPointer(window))->SetAspectRatio(ratio);
+}
 
-void window_reshape_handler(GLFWwindow *window, int32_t width, int32_t height) {}
+void window_reshape_handler(GLFWwindow *window, int32_t width, int32_t height) {
+}
 
 void idle_handler() {}
 
@@ -23,6 +29,8 @@ void idle_handler() {}
  * Main
  */
 int main(int argc, char *argv[]) {
+  spdlog::cfg::load_env_levels();
+
   if (!glfwInit()) return EXIT_FAILURE;
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
@@ -42,6 +50,10 @@ int main(int argc, char *argv[]) {
   // Make current context live
   glfwMakeContextCurrent(window);
 
+  glfwSetWindowSizeCallback(window, window_reshape_handler);
+  glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+  glfwSetKeyCallback(window, special_keyboard_handler);
+
 #ifndef __APPLE__
   // Need context before we do this.
   GLenum err = glewInit();
@@ -52,13 +64,11 @@ int main(int argc, char *argv[]) {
 
   glfwSwapInterval(1); // Enable vsync
 
-  glfwSetWindowSizeCallback(window, window_reshape_handler);
-  glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-  glfwSetKeyCallback(window, special_keyboard_handler);
-
-
   Scene scene{};
   glfwSetWindowUserPointer(window, &scene);
+  int width, height;
+  glfwGetFramebufferSize(window, &width, &height);
+  scene.SetAspectRatio((float) width / (float) height);
 
   while (!glfwWindowShouldClose(window)) {
     scene.Render();

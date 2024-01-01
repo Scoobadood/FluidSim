@@ -1,4 +1,5 @@
 #include "scene.h"
+#include "scene_data.h"
 #include "spdlog/spdlog.h"
 #include "gl_common.h"
 #include "shader.h"
@@ -6,6 +7,7 @@
 #include "glm/ext/matrix_transform.hpp"
 
 const int32_t POS_ATTR = 0;
+void CreateGeometry(GLuint &vao, GLuint &vbo, GLuint &ebo, GLsizei &num_elements);
 
 GLenum glerr;
 #define CHECK_GL_ERROR(txt)   \
@@ -13,81 +15,6 @@ if ((glerr = glGetError()) != GL_NO_ERROR){ \
 spdlog::critical("GL Error {} : {:x}", txt, glerr); \
 throw std::runtime_error("GLR"); \
 } \
-
-/**
- * Create VAO, VBO and EBO for a simple cube.
- * @param vao
- * @param vbo
- * @param ebo
- * @param num_elements
- */
-void CreateGeometry(GLuint &vao, GLuint &vbo, GLuint &ebo, GLsizei &num_elements) {
-  spdlog::info("Creating geometry");
-
-  // VAO
-  glGenVertexArrays(1, &vao);
-  glBindVertexArray(vao);
-
-  // Vertex size is 3 (position)
-  /*
-   * 0+-----------+4
-   *  |\          :\
-   *  | \         : \
-   *  | 1+--------:--+5
-   *  |  |        :  |
-   * 3+..|........:7 |
-   *   \ |           |
-   *    \|           |
-   *    2+-----------+6
-   *
-   */
-  float vertex_data[] = {
-          -1, 1, 1,
-          -1, 1, -1,
-          -1, -1, -1,
-          -1, -1, 1,
-          1, 1, 1,
-          1, 1, -1,
-          1, -1, -1,
-          1, -1, 1,
-  };
-  uint32_t indices[] = {  // note that we start from 0!
-          0, 1, 2,
-          0, 2, 3,
-          1, 5,6,
-          1,6,2,
-          5,4,7,
-          5,7,6,
-          4,0,3,
-          4,3,7,
-          0,4,5,
-          0,5,1,
-          2,6,7,
-          2,7,3
-  };
-  auto vtx_sz = (3) * 4;
-  auto num_vertices = 8;
-  num_elements = 36;
-
-  // Vertex locations
-  glGenBuffers(1, &vbo);
-  glGenBuffers(1, &ebo);
-
-  glBindBuffer(GL_ARRAY_BUFFER, vbo);
-  glBufferData(GL_ARRAY_BUFFER, vtx_sz * num_vertices, vertex_data, GL_STATIC_DRAW);
-  glEnableVertexAttribArray(POS_ATTR);
-  glVertexAttribPointer(POS_ATTR, 3, GL_FLOAT, GL_FALSE, vtx_sz, (GLvoid *)
-          nullptr);
-
-  // Normals and textures
-///    glEnableVertexAttribArray(tx_attr);
-//    glVertexAttribPointer(tx_attr, 2, GL_FLOAT, GL_FALSE, vtx_sz, (GLvoid *) 24);
-
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-
-  CHECK_GL_ERROR("create geometry");
-}
 
 /*
  * Create the geometry for a pool
@@ -112,8 +39,49 @@ Scene::Scene()//
   shader_->set_uniform("project", project);
 }
 
+
+/**
+ * Create VAO, VBO and EBO for a simple cube.
+ * @param vao
+ * @param vbo
+ * @param ebo
+ * @param num_elements
+ */
+void CreateGeometry(GLuint &vao, GLuint &vbo, GLuint &ebo, GLsizei &num_elements) {
+  spdlog::info("Creating geometry");
+
+  // VAO
+  glGenVertexArrays(1, &vao);
+  glBindVertexArray(vao);
+
+  auto vtx_sz = 12; // No normals or textures yet
+  auto num_vertices = sizeof(CUBE_VERTEX_DATA) / 3;
+  num_elements = sizeof(CUBE_INDICES);
+
+  // Vertex locations
+  glGenBuffers(1, &vbo);
+  glGenBuffers(1, &ebo);
+
+  glBindBuffer(GL_ARRAY_BUFFER, vbo);
+  glBufferData(GL_ARRAY_BUFFER, vtx_sz * num_vertices, CUBE_VERTEX_DATA, GL_STATIC_DRAW);
+  glEnableVertexAttribArray(POS_ATTR);
+  glVertexAttribPointer(POS_ATTR, 3, GL_FLOAT, GL_FALSE, vtx_sz, (GLvoid *)
+          nullptr);
+
+  // Normals and textures
+///    glEnableVertexAttribArray(tx_attr);
+//    glVertexAttribPointer(tx_attr, 2, GL_FLOAT, GL_FALSE, vtx_sz, (GLvoid *) 24);
+
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, num_elements, CUBE_INDICES, GL_STATIC_DRAW);
+
+  CHECK_GL_ERROR("create geometry");
+}
+
+
 void Scene::Render() {
   glEnable(GL_DEPTH_TEST);
+
   glClearColor(0.3, 0.3, 0.3, 1.0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -138,4 +106,11 @@ void Scene::Render() {
 
   glDrawElements(GL_TRIANGLES, num_elements_, GL_UNSIGNED_INT, (void *) nullptr);
   CHECK_GL_ERROR("Render");
+}
+
+void Scene::SetAspectRatio(float aspect_ratio) {
+  float fov = 35.0f;
+  glm::mat4 project = glm::perspective(glm::radians(fov), aspect_ratio, 0.1f, 35.0f);
+  shader_->use();
+  shader_->set_uniform("project", project);
 }
