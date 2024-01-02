@@ -64,6 +64,8 @@ const std::vector<float> &HeightField::Heights() const {
 
 void HeightField::Simulate(float delta_t) {
   auto idx = 0;
+  auto c2 = 20.f*20.f;
+  auto h2 = 1.f*1.f;
   for (auto z = 0; z < dim_z_; ++z) {
     for (auto x = 0; x < dim_x_; ++x) {
       auto left = (x > 0) ? heights_[idx - 1] : heights_[idx];
@@ -71,9 +73,7 @@ void HeightField::Simulate(float delta_t) {
       auto up = (z > 0) ? heights_[idx - dim_x_] : heights_[idx];
       auto down = (z < dim_z_ - 1) ? heights_[idx + dim_x_] : heights_[idx];
 
-      velocities_[idx] += ((left + right + up + down) * 0.25f - heights_[idx]);
-      velocities_[idx] *= 0.99f;
-
+      velocities_[idx] += delta_t *c2 *((left + right + up + down) * 0.25f - heights_[idx])/h2;
       idx++;
     }
   }

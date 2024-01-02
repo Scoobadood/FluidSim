@@ -342,7 +342,7 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
     auto finish = std::chrono::high_resolution_clock::now();
     std::chrono::duration<float, std::milli> elapsed = finish - start;
     start = finish;
-    hf.Simulate(0.1f);
+    hf.Simulate(elapsed.count()/1000.0f);
     gh.GenerateGeometry(hf, vertex_data, index_data);
     load_geometry(vao, vbo, ebo, vertex_data, index_data);
 
