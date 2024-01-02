@@ -31,8 +31,8 @@ void HeightField::Init(InitMode mode) {
     float step_x = dim_x_ / 8.0f;
     for (auto z = 0; z < dim_z_; ++z) {
       for (auto x = 0; x < dim_x_; ++x) {
-        float adj_x = (x / step_x) - 2.0f;
-        auto height = std::expf(-(adj_x * adj_x)-1);
+        float adj_x = (x / step_x);
+        auto height = std::expf(-(adj_x * adj_x)-0.5);
         height = 1.0f + std::fmax(height, 0.0f) * 2;
         heights_.push_back(height);
       }
@@ -74,6 +74,7 @@ void HeightField::Simulate(float delta_t) {
       auto down = (z < dim_z_ - 1) ? heights_[idx + dim_x_] : heights_[idx];
 
       velocities_[idx] += delta_t *c2 *((left + right + up + down) * 0.25f - heights_[idx])/h2;
+      velocities_[idx] *=0.999f;
       idx++;
     }
   }

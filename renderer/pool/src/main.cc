@@ -288,6 +288,8 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
   // Create a shader
   auto shader = init_shader();
 
+  g_model_rot= glm::rotate_slow(glm::mat4(1), (float) M_PI / 9.0f, {1, 0, 0});
+
   auto start = std::chrono::high_resolution_clock::now();
   while (!glfwWindowShouldClose(window)) {
     int width, height;
@@ -306,11 +308,11 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
     // Update view
     glm::mat4 view{1};
     view = glm::translate(view, glm::vec3(0, -2.5, -20));
-    view = glm::rotate_slow(view, (float) M_PI / 9.0f, {1, 0, 0});
+    view = view * g_model_rot;
 
     glm::mat4 model = glm::mat4(1.0);
     //  model = glm::translate(model,glm::vec3(0,0,-10));
-    model = model * g_model_rot;
+//    model = model * g_model_rot;
 
     texture->BindToTextureUnit(0);
     CHECK_GL_ERROR("Texture")
