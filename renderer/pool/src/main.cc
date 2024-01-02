@@ -96,10 +96,14 @@ void mouse_move_callback(GLFWwindow *window, double xpos, double ypos) {
 }
 
 
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods){
-  if( GLFW_KEY_R == key) {
+void key_callback(GLFWwindow *window, int key,//
+                  __attribute__((unused)) int scancode,
+                  __attribute__((unused)) int action,//
+                  __attribute__((unused)) int mods)//
+{
+  if (GLFW_KEY_R == key) {
     // Reset the simulation
-    ((HeightField*) glfwGetWindowUserPointer(window))->Init();
+    ((HeightField *) glfwGetWindowUserPointer(window))->Init();
   }
 }
 
@@ -149,7 +153,7 @@ GLFWwindow *initialise() {
  * ******************************************************************************************/
 
 void
-create_geometry_buffers(const GeometryHelper::StorageNeeds& s,//
+create_geometry_buffers(const GeometryHelper::StorageNeeds &s,//
                         GLuint &vao,//
                         GLuint &vbo,//
                         GLuint &ebo) {
@@ -175,7 +179,7 @@ create_geometry_buffers(const GeometryHelper::StorageNeeds& s,//
     offset += s.normal_data_size;
   }
 
-  if (s.texture_coord_size>0) {
+  if (s.texture_coord_size > 0) {
     glEnableVertexAttribArray(TEXT_ATTR);
     glVertexAttribPointer(TEXT_ATTR, 2, GL_FLOAT, GL_FALSE, s.bytes_per_vertex, (GLvoid *) offset);
   }

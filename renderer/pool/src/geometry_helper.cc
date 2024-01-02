@@ -30,6 +30,50 @@ GeometryHelper::GeometryHelper(float column_width, //
         , with_textures_{with_textures}//
 {}
 
+void GeometryHelper::AddSlab(float min_x, float max_x,
+                             float min_y, float max_y,
+                             float min_z, float max_z,
+                             float r, float g, float b,
+                             std::vector<float> &vertex_data,
+                             std::vector<uint32_t> &index_data) {
+  auto base_vertex_idx = vertex_data.size() / 6;
+  // Left face
+  vertex_data.insert(vertex_data.end(), {min_x, max_y, max_z, -1.0f, 0.0f, 0.0f});
+  vertex_data.insert(vertex_data.end(), {min_x, max_y, min_z, -1.0f, 0.0f, 0.0f});
+  vertex_data.insert(vertex_data.end(), {min_x, min_y, min_z, -1, 0, 0});
+  vertex_data.insert(vertex_data.end(), {min_x, min_y, max_z, -1, 0, 0});
+  // Front face
+  vertex_data.insert(vertex_data.end(), {min_x, max_y, min_z, 0.0f, 0.0f, -1.0f});
+  vertex_data.insert(vertex_data.end(), {max_x, max_y, min_z, 0.0f, 0.0f, -1.0f});
+  vertex_data.insert(vertex_data.end(), {max_x, min_y, min_z, 0.0f, 0.0f, -1.0f});
+  vertex_data.insert(vertex_data.end(), {min_x, min_y, min_z, 0.0f, 0.0f, -1.0f});
+  // Right face
+  vertex_data.insert(vertex_data.end(), {max_x, max_y, min_z, 1.0f, 0.0f, 0.0f});
+  vertex_data.insert(vertex_data.end(), {max_x, max_y, max_z, 1.0f, 0.0f, 0.0f});
+  vertex_data.insert(vertex_data.end(), {max_x, min_y, max_z, 1.0f, 0.0f, 0.0f});
+  vertex_data.insert(vertex_data.end(), {max_x, min_y, min_z, 1.0f, 0.0f, 0.0f});
+  // Back face
+  vertex_data.insert(vertex_data.end(), {max_x, max_y, max_z, 0.0f, 0.0f, 1.0f});
+  vertex_data.insert(vertex_data.end(), {min_x, max_y, max_z, 0.0f, 0.0f, 1.0f});
+  vertex_data.insert(vertex_data.end(), {min_x, min_y, max_z, 0.0f, 0.0f, 1.0f});
+  vertex_data.insert(vertex_data.end(), {max_x, min_y, max_z, 0.0f, 0.0f, 1.0f});
+  // Top face
+  vertex_data.insert(vertex_data.end(), {min_x, max_y, max_z, 0.0f, 1.0f, 0.0f});
+  vertex_data.insert(vertex_data.end(), {max_x, max_y, max_z, 0.0f, 1.0f, 0.0f});
+  vertex_data.insert(vertex_data.end(), {max_x, max_y, min_z, 0.0f, 1.0f, 0.0f});
+  vertex_data.insert(vertex_data.end(), {min_x, max_y, min_z, 0.0f, 1.0f, 0.0f});
+  // Bottom face
+  vertex_data.insert(vertex_data.end(), {min_x, min_y, min_z, 0.0f, -1.0f, 0.0f});
+  vertex_data.insert(vertex_data.end(), {max_x, min_y, min_z, 0.0f, -1.0f, 0.0f});
+  vertex_data.insert(vertex_data.end(), {max_x, min_y, max_z, 0.0f, -1.0f, 0.0f});
+  vertex_data.insert(vertex_data.end(), {min_x, min_y, max_z, 0.0f, -1.0f, 0.0f});
+
+
+  for (unsigned int base_index: CUBE_INDEX_OFFSETS) {
+    index_data.push_back(base_index + base_vertex_idx);
+  }
+}
+
 void GeometryHelper::GenerateGeometry(const HeightField &hf, std::vector<float> &vertex_data,
                                       std::vector<uint32_t> &index_data) const {
 
@@ -50,42 +94,7 @@ void GeometryHelper::GenerateGeometry(const HeightField &hf, std::vector<float> 
       auto max_x = min_x + column_width_;
       auto max_y = heights[height_idx];
 
-      // Left face
-      vertex_data.insert(vertex_data.end(), {min_x, max_y, max_z, -1.0f, 0.0f, 0.0f});
-      vertex_data.insert(vertex_data.end(), {min_x, max_y, min_z, -1.0f, 0.0f, 0.0f});
-      vertex_data.insert(vertex_data.end(), {min_x, min_y, min_z, -1, 0, 0});
-      vertex_data.insert(vertex_data.end(), {min_x, min_y, max_z, -1, 0, 0});
-      // Front face
-      vertex_data.insert(vertex_data.end(), {min_x, max_y, min_z, 0.0f, 0.0f, -1.0f});
-      vertex_data.insert(vertex_data.end(), {max_x, max_y, min_z, 0.0f, 0.0f, -1.0f});
-      vertex_data.insert(vertex_data.end(), {max_x, min_y, min_z, 0.0f, 0.0f, -1.0f});
-      vertex_data.insert(vertex_data.end(), {min_x, min_y, min_z, 0.0f, 0.0f, -1.0f});
-      // Right face
-      vertex_data.insert(vertex_data.end(), {max_x, max_y, min_z, 1.0f, 0.0f, 0.0f});
-      vertex_data.insert(vertex_data.end(), {max_x, max_y, max_z, 1.0f, 0.0f, 0.0f});
-      vertex_data.insert(vertex_data.end(), {max_x, min_y, max_z, 1.0f, 0.0f, 0.0f});
-      vertex_data.insert(vertex_data.end(), {max_x, min_y, min_z, 1.0f, 0.0f, 0.0f});
-      // Back face
-      vertex_data.insert(vertex_data.end(), {max_x, max_y, max_z, 0.0f, 0.0f, 1.0f});
-      vertex_data.insert(vertex_data.end(), {min_x, max_y, max_z, 0.0f, 0.0f, 1.0f});
-      vertex_data.insert(vertex_data.end(), {min_x, min_y, max_z, 0.0f, 0.0f, 1.0f});
-      vertex_data.insert(vertex_data.end(), {max_x, min_y, max_z, 0.0f, 0.0f, 1.0f});
-      // Top face
-      vertex_data.insert(vertex_data.end(), {min_x, max_y, max_z, 0.0f, 1.0f, 0.0f});
-      vertex_data.insert(vertex_data.end(), {max_x, max_y, max_z, 0.0f, 1.0f, 0.0f});
-      vertex_data.insert(vertex_data.end(), {max_x, max_y, min_z, 0.0f, 1.0f, 0.0f});
-      vertex_data.insert(vertex_data.end(), {min_x, max_y, min_z, 0.0f, 1.0f, 0.0f});
-      // Bottom face
-      vertex_data.insert(vertex_data.end(), {min_x, min_y, min_z, 0.0f, -1.0f, 0.0f});
-      vertex_data.insert(vertex_data.end(), {max_x, min_y, min_z, 0.0f, -1.0f, 0.0f});
-      vertex_data.insert(vertex_data.end(), {max_x, min_y, max_z, 0.0f, -1.0f, 0.0f});
-      vertex_data.insert(vertex_data.end(), {min_x, min_y, max_z, 0.0f, -1.0f, 0.0f});
-
-
-      for (unsigned int base_index: CUBE_INDEX_OFFSETS) {
-        index_data.push_back(base_index + base_vertex);
-      }
-      base_vertex += 24;
+      AddSlab(min_x, max_x, min_y, max_y, min_z, max_z, 0.0, 0.3, 0.8, vertex_data, index_data);
 
       min_x += column_width_;
       height_idx++;
@@ -93,6 +102,31 @@ void GeometryHelper::GenerateGeometry(const HeightField &hf, std::vector<float> 
     min_z += column_depth_;
   }
 
+  // Generate the pool surrounds geometry
+  // Left wall
+  AddSlab(-(total_width / 2.0f) - column_width_, -(total_width / 2.0f),
+          0, 2.0f,
+          -(total_depth / 2.0f), (total_depth / 2.0f),
+          6.0, 6.0, 6.0, vertex_data, index_data
+  );
+  // Back wall
+  AddSlab(-(total_width / 2.0f) - column_width_, (total_width / 2.0f) + column_width_,
+          0, 2.0f,
+          -(total_depth / 2.0f) - column_depth_, -(total_depth / 2.0f),
+          6.0, 6.0, 6.0, vertex_data, index_data
+  );
+  // Right wall
+  AddSlab((total_width / 2.0f), (total_width / 2.0f) + column_width_,
+          0, 2.0f,
+          -(total_depth / 2.0f), (total_depth / 2.0f),
+          6.0, 6.0, 6.0, vertex_data, index_data
+  );
+  // Base slab
+  AddSlab(-(total_width / 2.0f)-column_width_, (total_width / 2.0f) + column_width_,
+          -0.2f, 0.0f,
+          -(total_depth / 2.0f)-column_depth_, (total_depth / 2.0f),
+          6.0, 6.0, 6.0, vertex_data, index_data
+  );
 }
 
 GeometryHelper::StorageNeeds GeometryHelper::ComputeStorageNeeds(const HeightField &hf) const {
@@ -109,7 +143,12 @@ GeometryHelper::StorageNeeds GeometryHelper::ComputeStorageNeeds(const HeightFie
   s.bytes_per_vertex = s.position_data_size + s.normal_data_size + s.texture_coord_size;
 
   s.vertex_storage_sz_bytes = VERTS_PER_CUBE * s.bytes_per_vertex * hf.DimZ() * hf.DimX();
-  s.index_storage_sz_bytes = (long)( INDICES_PER_CUBE * sizeof(uint32_t) * hf.DimZ() * hf.DimX());
+  s.index_storage_sz_bytes = (long) (INDICES_PER_CUBE * sizeof(uint32_t) * hf.DimZ() * hf.DimX());
   s.num_elements = INDICES_PER_CUBE * hf.DimZ() * hf.DimX();
+
+  // Add in pool walls.
+  s.vertex_storage_sz_bytes += (4 * VERTS_PER_CUBE * s.bytes_per_vertex);
+  s.index_storage_sz_bytes += (4 * INDICES_PER_CUBE * sizeof(uint32_t));
+  s.num_elements += INDICES_PER_CUBE * 4;
   return s;
 }

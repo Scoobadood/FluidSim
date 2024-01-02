@@ -32,6 +32,14 @@ public:
 
   StorageNeeds ComputeStorageNeeds(const HeightField &hf) const;
 
+protected:
+  static void AddSlab(float min_x, float max_x,
+               float min_y, float max_y,
+               float min_z, float max_z,
+               float r, float g, float b,
+               std::vector<float> &vertex_data,
+               std::vector<uint32_t> &index_data) ;
+
 private:
   float column_width_;
   float column_depth_;
