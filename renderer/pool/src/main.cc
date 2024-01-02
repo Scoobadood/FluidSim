@@ -96,7 +96,12 @@ void mouse_move_callback(GLFWwindow *window, double xpos, double ypos) {
 }
 
 
-void idle_handler() {}
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods){
+  if( GLFW_KEY_R == key) {
+    // Reset the simulation
+    ((HeightField*) glfwGetWindowUserPointer(window))->Init();
+  }
+}
 
 /* ******************************************************************************************
  *  Initialise OpenGL, GLEW and GLFW
@@ -239,17 +244,19 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
 
   glfwSwapInterval(1); // Enable vsync
 
-  //
   // Set up callbacks
   //
   glfwSetMouseButtonCallback(window, mouse_button_callback);
   glfwSetCursorPosCallback(window, mouse_move_callback);
+  glfwSetKeyCallback(window, key_callback);
 
 
   // Set up Height field
   HeightField hf(15, 20);
   hf.Init();
   GeometryHelper gh{0.25f, 0.25f, true, false};
+
+  glfwSetWindowUserPointer(window, &hf);
 
   // Create initial geometry
   GLuint vao, vbo, ebo;
@@ -305,7 +312,6 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
     //
     // End of frame
     //
-    idle_handler();
     glfwSwapBuffers(window);
     glfwPollEvents();
   }
