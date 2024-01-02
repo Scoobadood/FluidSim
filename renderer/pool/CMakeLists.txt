@@ -9,6 +9,7 @@ FetchContent_MakeAvailable(glfw)
 add_executable(test_glfw
         src/main.cc include/main.h
         include/scene_data.h
+        src/height_field_sim.cc
 )
 
 target_include_directories(test_glfw

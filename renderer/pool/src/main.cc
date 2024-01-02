@@ -9,6 +9,7 @@
 #include "shader.h"
 #include "glm/detail/type_quat.hpp"
 #include "glm/gtc/quaternion.hpp"
+#include "height_field_sim.h"
 
 const int32_t POS_ATTR = 0;
 const int32_t NORM_ATTR = 1;
@@ -138,18 +139,10 @@ GLFWwindow *initialise() {
  *  We will have R rows and C columns, each of which is WxD cross-section and H[n] high
  *  The columns will be adjacent and centred on the origin.
  * ******************************************************************************************/
-void generate_geometry(uint32_t num_rows,
-                       uint32_t num_cols,
-                       const std::vector<float> &heights,
+void generate_geometry(const HeightField& hf,
                        float width, float depth,
                        std::vector<float> &vertex_data,
                        std::vector<uint32_t> &indices) {
-  if (num_cols * num_rows != heights.size()) {
-    auto msg = fmt::format("Height data is inaccurate R: {}, C: {}, H: {}", num_rows, num_cols, heights.size());
-    spdlog::error(msg);
-    throw std::runtime_error(msg);
-  }
-
   uint32_t base_indices[36] = {0, 1, 2,
                                0, 2, 3,
                                4, 5, 6,
@@ -164,18 +157,19 @@ void generate_geometry(uint32_t num_rows,
                                20, 22, 23
   };
 
-  auto total_width = (float) num_cols * width;
-  auto total_depth = (float) num_rows * depth;
+  auto total_width = (float) hf.DimX() * width;
+  auto total_depth = (float) hf.DimZ() * depth;
   const auto min_y = 0.0f;
 
 
   auto base_vertex = 0;
   auto height_idx = 0;
+  auto heights = hf.Heights();
   auto min_z = -(total_depth / 2.0f);
-  for (auto y = 0; y < num_rows; ++y) {
+  for (auto z = 0; z < hf.DimZ(); ++z) {
     auto min_x = -(total_width / 2.0f);
     auto max_z = min_z + depth;
-    for (auto x = 0; x < num_cols; ++x) {
+    for (auto x = 0; x < hf.DimX(); ++x) {
       auto max_x = min_x + width;
       auto max_y = heights[height_idx];
 
@@ -227,7 +221,7 @@ void generate_geometry(uint32_t num_rows,
  *  Create the geometry for the scene
  * ******************************************************************************************/
 void
-create_geometry(uint32_t num_rows, uint32_t num_cols, std::vector<float> &col_heights, float col_width, float col_depth,
+create_geometry(const HeightField& hf, float col_width, float col_depth,
                 GLuint &vao, GLuint &vbo,
                 GLuint &ebo, GLsizei &num_elements) {
   spdlog::info("Creating geometry");
@@ -235,7 +229,7 @@ create_geometry(uint32_t num_rows, uint32_t num_cols, std::vector<float> &col_he
   std::vector<float> vertex_data;
   std::vector<uint32_t> index_data;
   std::vector<float> heights;
-  generate_geometry(num_cols, num_rows, col_heights, col_width, col_depth, vertex_data, index_data);
+  generate_geometry(hf, col_width, col_depth, vertex_data, index_data);
 
   // VAO
   glGenVertexArrays(1, &vao);
@@ -269,11 +263,12 @@ create_geometry(uint32_t num_rows, uint32_t num_cols, std::vector<float> &col_he
   CHECK_GL_ERROR("create geometry")
 }
 
-void reload_geometry(GLuint vao, GLuint vbo, uint32_t num_rows, uint32_t num_cols, std::vector<float> &new_heights,
+void reload_geometry(const HeightField & hf,
+                     GLuint vao, GLuint vbo,
                      float col_width, float col_depth) {
   std::vector<float> vertex_data;
   std::vector<uint32_t> index_data;
-  generate_geometry(num_rows, num_cols, new_heights, col_width, col_depth, vertex_data, index_data);
+  generate_geometry(hf, col_width, col_depth, vertex_data, index_data);
 
   glBindVertexArray(vao);
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -285,46 +280,27 @@ void reload_geometry(GLuint vao, GLuint vbo, uint32_t num_rows, uint32_t num_col
 
   CHECK_GL_ERROR("regenerate geometry")
 }
-
-
 /* ******************************************************************************************
- *  Height field management
+ *
+ *  Create and bind Shader uniforms
+ *
  * ******************************************************************************************/
-std::vector<float> init_height_field(uint32_t num_rows, uint32_t num_columns) {
-  std::vector<float> heights;
+std::shared_ptr<Shader> init_shader() {
+  auto shader = Shader::from_files("/Users/dave/Projects/FluidSim/renderer/pool/shaders/lighting.vert",
+                                   "/Users/dave/Projects/FluidSim/renderer/pool/shaders/lighting.frag");
+  shader->use();
+  shader->set_uniform("light_dir", glm::vec3(0, -10, -10));
+  shader->set_uniform("light_intensity", 1.0f);
 
-  heights.reserve(num_columns * num_rows);
-  auto mid_r = num_rows/2.0f;
-  auto mid_c = num_columns/2.0f;
-  for (auto r = 0; r < num_rows; ++r) {
-    for (auto c = 0; c < num_columns; ++c) {
-      auto hx= 1.0f -(std::fabsf((float)r-mid_r))/(float)num_rows;
-      auto hy= 1.0f -(std::fabsf((float)c-mid_c))/(float)num_columns;
-      heights.push_back(hx+hy);
-    }
-  }
+  shader->set_uniform("kd", 0.8f);
+  shader->set_uniform("ks", 0.5f);
+  shader->set_uniform("ka", 0.1f);
+  shader->set_uniform("alpha", 10.0f);
+  shader->set_uniform("object_colour", glm::vec3{0.0f, 0.3f, 0.8f});
 
-  return heights;
-}
+  CHECK_GL_ERROR("Create shader")
 
-void
-adjust_height_field(uint32_t num_rows, uint32_t num_cols, std::vector<float> &heights, std::vector<float> &v_height) {
-  for (auto r = 0; r < num_rows; ++r) {
-    for (auto c = 0; c < num_cols; ++c) {
-
-      auto idx = r * num_cols + c;
-      auto left = (c > 0) ? heights[idx - 1] : heights[idx];
-      auto right = (c < num_cols - 1) ? heights[idx + 1] : heights[idx];
-      auto up = (r > 0) ? heights[idx - num_cols] : heights[idx];
-      auto down = (r < num_rows - 1) ? heights[idx + num_cols] : heights[idx];
-
-      v_height[idx] += ((left + right + up + down) * 0.25f - heights[idx]);
-      v_height[idx] *= 0.99f;
-    }
-  }
-  for (auto i = 0; i < heights.size(); ++i) {
-    heights[i] += v_height[i];
-  }
+  return shader;
 }
 
 /* ******************************************************************************************
@@ -356,18 +332,17 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
   GLuint vao, vbo, ebo;
   GLsizei num_elements;
 
-  auto heights = init_height_field(15, 20);
-  std::vector<float> v_height(15 * 20, 0);
+  HeightField hf(15, 20);
+  hf.Init();
+
   auto col_width = 0.25f;
   auto col_depth = 0.25f;
-  create_geometry(15, 20, heights, col_width, col_depth, vao, vbo, ebo, num_elements);
+  create_geometry(hf, col_width, col_depth, vao, vbo, ebo, num_elements);
 
   //
   // Create a shader
   //
-  auto shader = Shader::from_files("/Users/dave/Projects/FluidSim/renderer/pool/shaders/lighting.vert",
-                                   "/Users/dave/Projects/FluidSim/renderer/pool/shaders/lighting.frag");
-  CHECK_GL_ERROR("Create shader")
+  auto shader = init_shader();
 
 //  g_cam_rot = glm::rotate(g_cam_rot, (float) M_PI_2, glm::vec3(0, 1, 0));
   while (!glfwWindowShouldClose(window)) {
@@ -402,24 +377,14 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
     shader->set_uniform("view", view);
     shader->set_uniform("model", model);
 
-    shader->set_uniform("light_dir", glm::vec3(0, -10, -10));
-    shader->set_uniform("light_intensity", 1.0f);
-
-    shader->set_uniform("kd", 0.8f);
-    shader->set_uniform("ks", 0.5f);
-    shader->set_uniform("ka", 0.1f);
-    shader->set_uniform("alpha", 10.0f);
-    shader->set_uniform("object_colour", glm::vec3{0.0f, 0.3f, 0.8f});
-
-
     glDrawElements(GL_TRIANGLES, num_elements, GL_UNSIGNED_INT, (void *) nullptr);
     CHECK_GL_ERROR("Render")
 
     //
     // Update geometry
     //
-    adjust_height_field(15, 20, heights, v_height);
-    reload_geometry(vao, vbo, 15, 20, heights, col_width, col_depth);
+    hf.Simulate();
+    reload_geometry(hf, vao, vbo, col_width, col_depth);
 
     //
     // End of frame
