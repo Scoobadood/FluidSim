@@ -2,6 +2,7 @@
 // Created by Dave Durbin on 2/1/2024.
 //
 #include "height_field_sim.h"
+#include <cmath>
 
 HeightField::HeightField(uint32_t dim_x, uint32_t dim_z) //
         : dim_x_{dim_x}//
@@ -11,17 +12,21 @@ HeightField::HeightField(uint32_t dim_x, uint32_t dim_z) //
   velocities_.resize(dim_x * dim_z, 0.0f);
 }
 
-void HeightField::Init() {
+void HeightField::Init(InitMode mode) {
   heights_.clear();
-  auto mid_x = (float) dim_x_ / 2.0f;
-  auto mid_z = (float) dim_z_ / 2.0f;
+
+  float step_x = dim_x_ / 8.0f;
+  float step_z = dim_z_ / 8.0f;
   for (auto z = 0; z < dim_z_; ++z) {
     for (auto x = 0; x < dim_x_; ++x) {
-      auto hz = 1.0f - (std::abs((float) z - mid_z)) / (float) dim_z_;
-      auto hx = 1.0f - (std::abs((float) x - mid_x)) / (float) dim_x_;
-      heights_.push_back(hx + hz);
+      float adj_x = (x / step_x) - 2.0f;
+      float adj_z = (z / step_z) - 2.0f;
+      auto height = std::expf(-(adj_x * adj_x) - (adj_z * adj_z));
+      height = 1.0f + std::fmax(height, 0.0f)*2;
+      heights_.push_back( height);
     }
   }
+
   std::fill(velocities_.begin(), velocities_.end(), 0.0f);
 }
 
@@ -33,7 +38,7 @@ const std::vector<float> &HeightField::Heights() const {
   return heights_;
 }
 
-void HeightField::Simulate() {
+void HeightField::Simulate(float delta_t) {
   auto idx = 0;
   for (auto z = 0; z < dim_z_; ++z) {
     for (auto x = 0; x < dim_x_; ++x) {
@@ -43,12 +48,12 @@ void HeightField::Simulate() {
       auto down = (z < dim_z_ - 1) ? heights_[idx + dim_x_] : heights_[idx];
 
       velocities_[idx] += ((left + right + up + down) * 0.25f - heights_[idx]);
-      velocities_[idx] *= 0.995f;
+      velocities_[idx] *= 0.99f;
 
       idx++;
     }
   }
   for (auto i = 0; i < heights_.size(); ++i) {
-    heights_[i] += velocities_[i];
+    heights_[i] += velocities_[i] * delta_t;
   }
 }

@@ -104,7 +104,7 @@ void key_callback(GLFWwindow *window, int key,//
 {
   if (GLFW_KEY_R == key) {
     // Reset the simulation
-    ((HeightField *) glfwGetWindowUserPointer(window))->Init();
+    ((HeightField *) glfwGetWindowUserPointer(window))->Init(HeightField::PULSE);
   }
 }
 
@@ -264,7 +264,7 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
 
   // Set up Height field
   HeightField hf(30, 40);
-  hf.Init();
+  hf.Init(HeightField::PULSE);
   GeometryHelper gh{0.25f, 0.25f, true, true};
 
   glfwSetWindowUserPointer(window, &hf);
@@ -283,6 +283,7 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
   // Create a shader
   auto shader = init_shader();
 
+  auto start = std::chrono::high_resolution_clock::now();
   while (!glfwWindowShouldClose(window)) {
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
@@ -316,7 +317,10 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
     //
     // Update geometry
     //
-    hf.Simulate();
+    auto finish = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<float, std::milli> elapsed = finish - start;
+    start = finish;
+    hf.Simulate(0.1f);
     gh.GenerateGeometry(hf, vertex_data, index_data);
     load_geometry(vao, vbo, ebo, vertex_data, index_data);
 

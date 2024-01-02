@@ -9,12 +9,15 @@
 
 class HeightField {
 public:
+  enum InitMode {
+    PULSE
+  };
   HeightField(uint32_t dim_x, uint32_t dim_z);
-  void Init();
+  void Init(InitMode mode);
   uint32_t DimX() const;
   uint32_t DimZ() const;
   const std::vector<float>& Heights() const;
-  void Simulate();
+  void Simulate(float delta_t);
 
 private:
   uint32_t dim_x_;
