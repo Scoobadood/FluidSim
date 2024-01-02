@@ -4,6 +4,7 @@
 #include "main.h"
 #include "gl_common.h"
 #include "shader.h"
+#include "texture.h"
 #include "height_field_sim.h"
 #include "geometry_helper.h"
 
@@ -262,10 +263,13 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
   glfwSetKeyCallback(window, key_callback);
 
 
+  // Textures
+  auto texture = std::make_shared<Texture>("/Users/dave/Projects/FluidSim/renderer/pool/assets/combo_1024x1024.jpg");
+
   // Set up Height field
   HeightField hf(30, 40);
   hf.Init(HeightField::PULSE);
-  GeometryHelper gh{0.25f, 0.25f, true, true};
+  GeometryHelper gh{0.25f, 0.25f, true, false, true};
 
   glfwSetWindowUserPointer(window, &hf);
 
@@ -306,10 +310,14 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
     //  model = glm::translate(model,glm::vec3(0,0,-10));
     model = model * g_model_rot;
 
+    texture->BindToTextureUnit(0);
+    CHECK_GL_ERROR("Texture")
+
     shader->use();
     shader->set_uniform("project", project);
     shader->set_uniform("view", view);
     shader->set_uniform("model", model);
+    shader->set_uniform("combi_texture", 0);
 
     glDrawElements(GL_TRIANGLES, sn.num_elements, GL_UNSIGNED_INT, (void *) nullptr);
     CHECK_GL_ERROR("Render")

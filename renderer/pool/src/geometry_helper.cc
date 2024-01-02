@@ -2,23 +2,15 @@
 // Created by Dave Durbin on 2/1/2024.
 //
 #include "geometry_helper.h"
+#include <map>
+#include <string>
 
-const uint32_t CUBE_INDEX_OFFSETS[36] = {//
-        0, 1, 2,
-        0, 2, 3,
-        4, 5, 6,
-        4, 6, 7,
-        8, 9, 10,
-        8, 10, 11,
-        12, 13, 14,
-        12, 14, 15,
-        16, 17, 18,
-        16, 18, 19,
-        20, 21, 22,
-        20, 22, 23
-};
-
-
+const std::map<std::string, std::pair<std::pair<float, float>, std::pair<float, float>>> TEXTURES
+        {
+                {"concrete", std::make_pair(std::make_pair(0.f,0.5f),std::make_pair(.5f,1.f))},
+                {"tiles", std::make_pair(std::make_pair(0.5f,0.5f),std::make_pair(1.f,1.f))},
+                {"water", std::make_pair(std::make_pair(0.6f,0.6f),std::make_pair(.6f,.601))}
+        };
 GeometryHelper::GeometryHelper(float column_width, //
                                float column_height, //
                                bool with_normals,//
@@ -42,23 +34,33 @@ void GeometryHelper::AddXPlane(float x, float normal_x,
                                float min_y, float max_y,
                                float min_z, float max_z,
                                float r, float g, float b,
+                               const std::string& texture,
                                std::vector<float> &vertex_data,
                                std::vector<uint32_t> &index_data) const {
   auto floats_per_vertex = 6 + (with_textures_ ? 2:0) + (with_colours_ ? 3:0);
   auto base_vertex_idx = vertex_data.size() / floats_per_vertex;
 
+  float ll=0,rr=1,tt=0,bb=1;
+  if( with_textures_ && !texture.empty()) {
+    auto tex_data = TEXTURES.at(texture);
+    ll = tex_data.first.first;
+    rr = tex_data.second.first;
+    tt = tex_data.first.second;
+    bb = tex_data.second.second;
+  }
+
   vertex_data.insert(vertex_data.end(), {x, max_y, max_z, normal_x, 0, 0});
   if (with_colours_) vertex_data.insert(vertex_data.end(), {r, g, b});
-  if (with_textures_) vertex_data.insert(vertex_data.end(), {0, 0});
+  if (with_textures_) vertex_data.insert(vertex_data.end(), {ll, tt});
   vertex_data.insert(vertex_data.end(), {x, max_y, min_z, normal_x, 0, 0});
   if (with_colours_) vertex_data.insert(vertex_data.end(), {r, g, b});
-  if (with_textures_) vertex_data.insert(vertex_data.end(), {1, 0});
+  if (with_textures_) vertex_data.insert(vertex_data.end(), {rr, tt});
   vertex_data.insert(vertex_data.end(), {x, min_y, min_z, normal_x, 0, 0});
   if (with_colours_) vertex_data.insert(vertex_data.end(), {r, g, b});
-  if (with_textures_) vertex_data.insert(vertex_data.end(), {1, 1});
+  if (with_textures_) vertex_data.insert(vertex_data.end(), {rr, bb});
   vertex_data.insert(vertex_data.end(), {x, min_y, max_z, normal_x, 0, 0});
   if (with_colours_) vertex_data.insert(vertex_data.end(), {r, g, b});
-  if (with_textures_) vertex_data.insert(vertex_data.end(), {0, 1});
+  if (with_textures_) vertex_data.insert(vertex_data.end(), {ll, bb});
   BumpIndexData(base_vertex_idx, index_data);
 }
 
@@ -66,22 +68,31 @@ void GeometryHelper::AddYPlane(float y, float normal_y,
                                float min_x, float max_x,
                                float min_z, float max_z,
                                float r, float g, float b,
+                               const std::string& texture,
                                std::vector<float> &vertex_data,
                                std::vector<uint32_t> &index_data) const {
+  float ll=0,rr=1,tt=0,bb=1;
+  if( with_textures_ && !texture.empty()) {
+    auto tex_data = TEXTURES.at(texture);
+    ll = tex_data.first.first;
+    rr = tex_data.second.first;
+    tt = tex_data.first.second;
+    bb = tex_data.second.second;
+  }
   auto floats_per_vertex = 6 + (with_textures_ ? 2:0) + (with_colours_ ? 3:0);
   auto base_vertex_idx = vertex_data.size() / floats_per_vertex;
   vertex_data.insert(vertex_data.end(), {min_x, y, max_z, 0.0f, normal_y, 0.0f});
   if (with_colours_) vertex_data.insert(vertex_data.end(), {r, g, b});
-  if (with_textures_) vertex_data.insert(vertex_data.end(), {0.0, 0.0});
+  if (with_textures_) vertex_data.insert(vertex_data.end(), {ll, tt});
   vertex_data.insert(vertex_data.end(), {max_x, y, max_z, 0.0f, normal_y, 0.0f});
   if (with_colours_) vertex_data.insert(vertex_data.end(), {r, g, b});
-  if (with_textures_) vertex_data.insert(vertex_data.end(), {1.0, 0.0});
+  if (with_textures_) vertex_data.insert(vertex_data.end(), {rr, tt});
   vertex_data.insert(vertex_data.end(), {max_x, y, min_z, 0.0f, normal_y, 0.0f});
   if (with_colours_) vertex_data.insert(vertex_data.end(), {r, g, b});
-  if (with_textures_) vertex_data.insert(vertex_data.end(), {1.0, 1.0});
+  if (with_textures_) vertex_data.insert(vertex_data.end(), {rr, bb});
   vertex_data.insert(vertex_data.end(), {min_x, y, min_z, 0.0f, normal_y, 0.0f});
   if (with_colours_) vertex_data.insert(vertex_data.end(), {r, g, b});
-  if (with_textures_) vertex_data.insert(vertex_data.end(), {0.0, 1.0});
+  if (with_textures_) vertex_data.insert(vertex_data.end(), {ll, bb});
   BumpIndexData(base_vertex_idx, index_data);
 }
 
@@ -89,22 +100,31 @@ void GeometryHelper::AddZPlane(float z, float normal_z,
                                float min_x, float max_x,
                                float min_y, float max_y,
                                float r, float g, float b,
+                               const std::string& texture,
                                std::vector<float> &vertex_data,
                                std::vector<uint32_t> &index_data) const {
+  float ll=0,rr=1,tt=0,bb=1;
+  if( with_textures_ && !texture.empty()) {
+    auto tex_data = TEXTURES.at(texture);
+    ll = tex_data.first.first;
+    rr = tex_data.second.first;
+    tt = tex_data.first.second;
+    bb = tex_data.second.second;
+  }
   auto floats_per_vertex = 6 + (with_textures_ ? 2:0) + (with_colours_ ? 3:0);
   auto base_vertex_idx = vertex_data.size() / floats_per_vertex;
   vertex_data.insert(vertex_data.end(), {min_x, max_y, z, 0.0f, 0.0f, normal_z});
   if (with_colours_) vertex_data.insert(vertex_data.end(), {r, g, b});
-  if (with_textures_) vertex_data.insert(vertex_data.end(), {0.0, 0.0});
+  if (with_textures_) vertex_data.insert(vertex_data.end(), {ll, tt});
   vertex_data.insert(vertex_data.end(), {max_x, max_y, z, 0.0f, 0.0f, normal_z});
   if (with_colours_) vertex_data.insert(vertex_data.end(), {r, g, b});
-  if (with_textures_) vertex_data.insert(vertex_data.end(), {1.0, 0.0});
+  if (with_textures_) vertex_data.insert(vertex_data.end(), {rr, tt});
   vertex_data.insert(vertex_data.end(), {max_x, min_y, z, 0.0f, 0.0f, normal_z});
   if (with_colours_) vertex_data.insert(vertex_data.end(), {r, g, b});
-  if (with_textures_) vertex_data.insert(vertex_data.end(), {1.0, 1.0});
+  if (with_textures_) vertex_data.insert(vertex_data.end(), {rr, bb});
   vertex_data.insert(vertex_data.end(), {min_x, min_y, z, 0.0f, 0.0f, normal_z});
   if (with_colours_) vertex_data.insert(vertex_data.end(), {r, g, b});
-  if (with_textures_) vertex_data.insert(vertex_data.end(), {0.0, 1.0});
+  if (with_textures_) vertex_data.insert(vertex_data.end(), {ll, bb});
   BumpIndexData(base_vertex_idx, index_data);
 
 }
@@ -113,20 +133,21 @@ void GeometryHelper::AddSlab(float min_x, float max_x,
                              float min_y, float max_y,
                              float min_z, float max_z,
                              float r, float g, float b,
+                             const std::string& texture,
                              std::vector<float> &vertex_data,
                              std::vector<uint32_t> &index_data) const {
   // Left face
-  AddXPlane(min_x, -1, min_y, max_y, min_z, max_z, r, g, b, vertex_data, index_data);
+  AddXPlane(min_x, -1, min_y, max_y, min_z, max_z, r, g, b, texture,vertex_data, index_data);
   // Front face
-  AddZPlane(min_z, -1, min_x, max_x, min_y, max_y, r, g, b, vertex_data, index_data);
+  AddZPlane(min_z, -1, min_x, max_x, min_y, max_y, r, g, b, texture,vertex_data, index_data);
   // Right face
-  AddXPlane(max_x, 1, min_y, max_y, min_z, max_z, r, g, b, vertex_data, index_data);
+  AddXPlane(max_x, 1, min_y, max_y, min_z, max_z, r, g, b, texture,vertex_data, index_data);
   // Back face
-  AddZPlane(max_z, 1, min_x, max_x, min_y, max_y, r, g, b, vertex_data, index_data);
+  AddZPlane(max_z, 1, min_x, max_x, min_y, max_y, r, g, b, texture,vertex_data, index_data);
   // Top face
-  AddYPlane(max_y, 1, min_x, max_x, min_z, max_z, r, g, b, vertex_data, index_data);
+  AddYPlane(max_y, 1, min_x, max_x, min_z, max_z, r, g, b, texture,vertex_data, index_data);
   // Bottom face
-  AddYPlane(min_y, -1, min_x, max_x, min_z, max_z, r, g, b, vertex_data, index_data);
+  AddYPlane(min_y, -1, min_x, max_x, min_z, max_z, r, g, b, texture,vertex_data, index_data);
 }
 
 void GeometryHelper::GenerateGeometry(const HeightField &hf, std::vector<float> &vertex_data,
@@ -149,7 +170,7 @@ void GeometryHelper::GenerateGeometry(const HeightField &hf, std::vector<float> 
       auto max_x = min_x + column_width_;
       auto max_y = heights[height_idx];
 
-      AddSlab(min_x, max_x, min_y, max_y, min_z, max_z, 0.0, 0.3, 0.8, vertex_data, index_data);
+      AddSlab(min_x, max_x, min_y, max_y, min_z, max_z, 0.0, 0.3, 0.8, "water", vertex_data, index_data);
 
       min_x += column_width_;
       height_idx++;
@@ -162,25 +183,25 @@ void GeometryHelper::GenerateGeometry(const HeightField &hf, std::vector<float> 
   AddSlab(-(total_width / 2.0f) - column_width_, -(total_width / 2.0f),
           0, 2.0f,
           -(total_depth / 2.0f), (total_depth / 2.0f),
-          6.0, 6.0, 6.0, vertex_data, index_data
+          6.0, 6.0, 6.0, "concrete", vertex_data, index_data
   );
   // Back wall
   AddSlab(-(total_width / 2.0f) - column_width_, (total_width / 2.0f) + column_width_,
           0, 2.0f,
           -(total_depth / 2.0f) - column_depth_, -(total_depth / 2.0f),
-          6.0, 6.0, 6.0, vertex_data, index_data
+          6.0, 6.0, 6.0, "concrete", vertex_data, index_data
   );
   // Right wall
   AddSlab((total_width / 2.0f), (total_width / 2.0f) + column_width_,
           0, 2.0f,
           -(total_depth / 2.0f), (total_depth / 2.0f),
-          6.0, 6.0, 6.0, vertex_data, index_data
+          6.0, 6.0, 6.0, "concrete", vertex_data, index_data
   );
   // Base slab
   AddSlab(-(total_width / 2.0f) - column_width_, (total_width / 2.0f) + column_width_,
           -0.2f, 0.0f,
           -(total_depth / 2.0f) - column_depth_, (total_depth / 2.0f),
-          6.0, 6.0, 6.0, vertex_data, index_data
+          6.0, 6.0, 6.0, "tiles", vertex_data, index_data
   );
 }
 

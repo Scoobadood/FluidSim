@@ -39,6 +39,7 @@ protected:
                  float min_y, float max_y,
                  float min_z, float max_z,
                  float r, float g, float b,
+                 const std::string& texture,
                  std::vector<float> &vertex_data,
                  std::vector<uint32_t> &index_data) const;
 
@@ -46,6 +47,7 @@ protected:
                  float min_x, float max_x,
                  float min_z, float max_z,
                  float r, float g, float b,
+                 const std::string& texture,
                  std::vector<float> &vertex_data,
                  std::vector<uint32_t> &index_data) const;
 
@@ -53,6 +55,7 @@ protected:
                  float min_x, float max_x,
                  float min_y, float max_y,
                  float r, float g, float b,
+                 const std::string& texture,
                  std::vector<float> &vertex_data,
                  std::vector<uint32_t> &index_data) const;
 
@@ -60,6 +63,7 @@ protected:
                float min_y, float max_y,
                float min_z, float max_z,
                float r, float g, float b,
+               const std::string& texture,
                std::vector<float> &vertex_data,
                std::vector<uint32_t> &index_data) const;
 

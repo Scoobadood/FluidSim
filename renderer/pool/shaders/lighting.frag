@@ -4,6 +4,7 @@ layout (location=0) out vec4 frag_colour;
 
 in vec3 frag_normal;
 in vec3 frag_position;
+in vec2 frag_tex_coord;
 in vec3 colour;
 
 uniform float kd;               // Diffuse constant
@@ -11,12 +12,16 @@ uniform float ka;               // Ambient constant
 uniform float ks;               // Specular constant
 uniform float alpha;            // Shininess of surface
 
+uniform sampler2D combi_texture; // Tx
+
+
 uniform vec3 light_dir;         // From light. Invert for dir to light
 uniform float light_intensity;
 
 uniform vec3 object_colour;
 
 void main() {
+    vec3 base_colour   = texture(combi_texture, frag_tex_coord).rgb;
     vec3 n_n           = normalize(frag_normal);
     vec3 n_ld          = normalize(-light_dir);
 
@@ -30,8 +35,8 @@ void main() {
     float spec_coeff   = pow(r_dot_v, alpha);
 
     vec3 spec_light    = ks * spec_coeff * light_intensity * vec3(1,1,1);
-    vec3 ambient_light = ka * light_intensity * colour;
-    vec3 diff_light    = kd * n_dot_w * light_intensity * colour;
+    vec3 ambient_light = ka * light_intensity * base_colour;
+    vec3 diff_light    = kd * n_dot_w * light_intensity * base_colour;
     vec3 l1 = diff_light + spec_light;
 
     frag_colour = vec4(l1, 1.0);
