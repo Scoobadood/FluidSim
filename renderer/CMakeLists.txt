@@ -54,6 +54,9 @@ FetchContent_MakeAvailable(googletest spdlog glm stb)
 IF (APPLE)
     FIND_LIBRARY(OpenGL_LIBRARY OpenGL)
     add_definitions(-DGL_SILENCE_DEPRECATION)
+    add_definitions(-D__gl_h_)
+    add_definitions(-DGL_DO_NOT_WARN_IF_MULTI_GL_VERSION_HEADERS_INCLUDED)
+
 ENDIF (APPLE)
 
 add_subdirectory(gl_helpers)
