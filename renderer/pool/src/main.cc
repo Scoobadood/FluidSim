@@ -1,15 +1,17 @@
+#include "spdlog/cfg/env.h"
 #include "spdlog/spdlog.h"
 
 #include "main.h"
-
-#include "spdlog/cfg/env.h"
-#include "glm/ext/matrix_clip_space.hpp"
-#include "glm/ext/matrix_transform.hpp"
 #include "gl_common.h"
 #include "shader.h"
+#include "height_field_sim.h"
+#include "geometry_helper.h"
+
+#include "glm/ext/matrix_clip_space.hpp"
+#include "glm/ext/matrix_transform.hpp"
 #include "glm/detail/type_quat.hpp"
 #include "glm/gtc/quaternion.hpp"
-#include "height_field_sim.h"
+
 
 const int32_t POS_ATTR = 0;
 const int32_t NORM_ATTR = 1;
@@ -136,126 +138,16 @@ GLFWwindow *initialise() {
 }
 
 /* ******************************************************************************************
- *  Generate the geometry for the scene.
- *  We will have R rows and C columns, each of which is WxD cross-section and H[n] high
- *  The columns will be adjacent and centred on the origin.
- * ******************************************************************************************/
-void generate_geometry(const HeightField &hf,
-                       float width, float depth,
-                       std::vector<float> &vertex_data,
-                       std::vector<uint32_t> &indices) {
-  uint32_t base_indices[36] = {0, 1, 2,
-                               0, 2, 3,
-                               4, 5, 6,
-                               4, 6, 7,
-                               8, 9, 10,
-                               8, 10, 11,
-                               12, 13, 14,
-                               12, 14, 15,
-                               16, 17, 18,
-                               16, 18, 19,
-                               20, 21, 22,
-                               20, 22, 23
-  };
-
-  auto total_width = (float) hf.DimX() * width;
-  auto total_depth = (float) hf.DimZ() * depth;
-  const auto min_y = 0.0f;
-
-  vertex_data.clear();
-
-  auto base_vertex = 0;
-  auto height_idx = 0;
-  auto heights = hf.Heights();
-  auto min_z = -(total_depth / 2.0f);
-  for (auto z = 0; z < hf.DimZ(); ++z) {
-    auto min_x = -(total_width / 2.0f);
-    auto max_z = min_z + depth;
-    for (auto x = 0; x < hf.DimX(); ++x) {
-      auto max_x = min_x + width;
-      auto max_y = heights[height_idx];
-
-      // Left face
-      vertex_data.insert(vertex_data.end(), {min_x, max_y, max_z, -1.0f, 0.0f, 0.0f});
-      vertex_data.insert(vertex_data.end(), {min_x, max_y, min_z, -1.0f, 0.0f, 0.0f});
-      vertex_data.insert(vertex_data.end(), {min_x, min_y, min_z, -1, 0, 0});
-      vertex_data.insert(vertex_data.end(), {min_x, min_y, max_z, -1, 0, 0});
-      // Front face
-      vertex_data.insert(vertex_data.end(), {min_x, max_y, min_z, 0.0f, 0.0f, -1.0f});
-      vertex_data.insert(vertex_data.end(), {max_x, max_y, min_z, 0.0f, 0.0f, -1.0f});
-      vertex_data.insert(vertex_data.end(), {max_x, min_y, min_z, 0.0f, 0.0f, -1.0f});
-      vertex_data.insert(vertex_data.end(), {min_x, min_y, min_z, 0.0f, 0.0f, -1.0f});
-      // Right face
-      vertex_data.insert(vertex_data.end(), {max_x, max_y, min_z, 1.0f, 0.0f, 0.0f});
-      vertex_data.insert(vertex_data.end(), {max_x, max_y, max_z, 1.0f, 0.0f, 0.0f});
-      vertex_data.insert(vertex_data.end(), {max_x, min_y, max_z, 1.0f, 0.0f, 0.0f});
-      vertex_data.insert(vertex_data.end(), {max_x, min_y, min_z, 1.0f, 0.0f, 0.0f});
-      // Back face
-      vertex_data.insert(vertex_data.end(), {max_x, max_y, max_z, 0.0f, 0.0f, 1.0f});
-      vertex_data.insert(vertex_data.end(), {min_x, max_y, max_z, 0.0f, 0.0f, 1.0f});
-      vertex_data.insert(vertex_data.end(), {min_x, min_y, max_z, 0.0f, 0.0f, 1.0f});
-      vertex_data.insert(vertex_data.end(), {max_x, min_y, max_z, 0.0f, 0.0f, 1.0f});
-      // Top face
-      vertex_data.insert(vertex_data.end(), {min_x, max_y, max_z, 0.0f, 1.0f, 0.0f});
-      vertex_data.insert(vertex_data.end(), {max_x, max_y, max_z, 0.0f, 1.0f, 0.0f});
-      vertex_data.insert(vertex_data.end(), {max_x, max_y, min_z, 0.0f, 1.0f, 0.0f});
-      vertex_data.insert(vertex_data.end(), {min_x, max_y, min_z, 0.0f, 1.0f, 0.0f});
-      // Bottom face
-      vertex_data.insert(vertex_data.end(), {min_x, min_y, min_z, 0.0f, -1.0f, 0.0f});
-      vertex_data.insert(vertex_data.end(), {max_x, min_y, min_z, 0.0f, -1.0f, 0.0f});
-      vertex_data.insert(vertex_data.end(), {max_x, min_y, max_z, 0.0f, -1.0f, 0.0f});
-      vertex_data.insert(vertex_data.end(), {min_x, min_y, max_z, 0.0f, -1.0f, 0.0f});
-
-
-      for (unsigned int base_index: base_indices) {
-        indices.push_back(base_index + base_vertex);
-      }
-      base_vertex += 24;
-
-      min_x += width;
-      height_idx++;
-    }
-    min_z += depth;
-  }
-}
-
-/* ******************************************************************************************
  *
  *  Create the geometry for the scene
  *
  * ******************************************************************************************/
-void compute_storage_for_columns(uint32_t num_columns, //
-                                 bool with_normals, //
-                                 bool with_textures, //
-                                 GLsizeiptr &vertex_storage_sz_bytes,//
-                                 GLsizeiptr &index_storage_sz_bytes, //
-                                 GLsizei &position_data_size,
-                                 GLsizei &normal_data_size,
-                                 GLsizei &texture_coord_size
-) {
-  const uint32_t VERTS_PER_CUBE = 6 /* faces */ * 4 /* vertices per face */;
-  const uint32_t BYTES_PER_VERTEX = 3 /* floats */ * sizeof(float) /* bytes per float */;
-  const uint32_t BYTES_PER_NORMAL = 3 /* floats */ * sizeof(float) /* bytes per float */;
-  const uint32_t BYTES_PER_TEXTURE_COORD = 2 /* floats */ * sizeof(float) /* bytes per float */;
-  const uint32_t INDICES_PER_CUBE = 2 /* triangles per face */ * 6 /* faces */ * 3 /*indices per triangle */;
-
-  position_data_size = BYTES_PER_VERTEX;
-  normal_data_size = with_normals ? BYTES_PER_NORMAL : 0;
-  texture_coord_size = with_textures ? BYTES_PER_TEXTURE_COORD : 0;
-  auto bytes_per_vertex = position_data_size + normal_data_size + texture_coord_size;
-
-  vertex_storage_sz_bytes = VERTS_PER_CUBE * bytes_per_vertex * num_columns;
-  index_storage_sz_bytes = INDICES_PER_CUBE * sizeof(uint32_t) * num_columns;
-}
 
 void
-create_geometry_buffers(uint32_t num_columns, //
-                        bool with_normals, //
-                        bool with_textures, //
+create_geometry_buffers(const GeometryHelper::StorageNeeds& s,//
                         GLuint &vao,//
                         GLuint &vbo,//
-                        GLuint &ebo,//
-                        GLuint &num_elements) {
+                        GLuint &ebo) {
   spdlog::info("Creating buffers");
 
   // VAO
@@ -264,40 +156,28 @@ create_geometry_buffers(uint32_t num_columns, //
   glGenBuffers(1, &vbo);
   glGenBuffers(1, &ebo);
 
-  // Allocate sufficient storage for N columns of data
-  GLsizeiptr vertex_storage_sz_bytes;
-  GLsizeiptr index_storage_sz_bytes;
-  GLsizei position_data_size;
-  GLsizei normal_data_size;
-  GLsizei texture_coord_size;
-  GLsizei bytes_per_vertex;
-  compute_storage_for_columns(num_columns, with_normals, with_textures, vertex_storage_sz_bytes, index_storage_sz_bytes, position_data_size,
-                              normal_data_size, texture_coord_size);
-  bytes_per_vertex = position_data_size + normal_data_size + texture_coord_size;
-
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
-  glBufferData(GL_ARRAY_BUFFER, vertex_storage_sz_bytes, nullptr, GL_DYNAMIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, s.vertex_storage_sz_bytes, nullptr, GL_DYNAMIC_DRAW);
 
   long offset = 0;
   glEnableVertexAttribArray(POS_ATTR);
-  glVertexAttribPointer(POS_ATTR, 3, GL_FLOAT, GL_FALSE, bytes_per_vertex, (GLvoid *) offset);
-  offset += position_data_size;
+  glVertexAttribPointer(POS_ATTR, 3, GL_FLOAT, GL_FALSE, s.bytes_per_vertex, (GLvoid *) offset);
+  offset += s.position_data_size;
 
-  if (with_normals) {
+  if (s.normal_data_size > 0) {
     glEnableVertexAttribArray(NORM_ATTR);
-    glVertexAttribPointer(NORM_ATTR, 3, GL_FLOAT, GL_FALSE, bytes_per_vertex, (GLvoid *) offset);
-    offset += normal_data_size;
+    glVertexAttribPointer(NORM_ATTR, 3, GL_FLOAT, GL_FALSE, s.bytes_per_vertex, (GLvoid *) offset);
+    offset += s.normal_data_size;
   }
 
-  if (with_textures) {
+  if (s.texture_coord_size>0) {
     glEnableVertexAttribArray(TEXT_ATTR);
-    glVertexAttribPointer(TEXT_ATTR, 2, GL_FLOAT, GL_FALSE, bytes_per_vertex, (GLvoid *) offset);
+    glVertexAttribPointer(TEXT_ATTR, 2, GL_FLOAT, GL_FALSE, s.bytes_per_vertex, (GLvoid *) offset);
   }
 
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, index_storage_sz_bytes, nullptr, GL_DYNAMIC_DRAW);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, s.index_storage_sz_bytes, nullptr, GL_DYNAMIC_DRAW);
 
-  num_elements = index_storage_sz_bytes / sizeof(uint32_t);
   CHECK_GL_ERROR("create geometry")
 }
 
@@ -369,18 +249,17 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
   // Set up Height field
   HeightField hf(15, 20);
   hf.Init();
+  GeometryHelper gh{0.25f, 0.25f, true, false};
 
   // Create initial geometry
   GLuint vao, vbo, ebo;
-  GLuint num_elements;
-  create_geometry_buffers(hf.DimX() * hf.DimZ(), true, false, vao, vbo, ebo, num_elements);
+  auto sn = gh.ComputeStorageNeeds(hf);
+  create_geometry_buffers(sn, vao, vbo, ebo);
 
   // Generate and load the geometry
-  auto col_width = 0.25f;
-  auto col_depth = 0.25f;
   std::vector<float> vertex_data;
   std::vector<uint32_t> index_data;
-  generate_geometry(hf, col_width, col_depth, vertex_data, index_data);
+  gh.GenerateGeometry(hf, vertex_data, index_data);
   load_geometry(vao, vbo, ebo, vertex_data, index_data);
 
   // Create a shader
@@ -413,14 +292,14 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
     shader->set_uniform("view", view);
     shader->set_uniform("model", model);
 
-    glDrawElements(GL_TRIANGLES, num_elements, GL_UNSIGNED_INT, (void *) nullptr);
+    glDrawElements(GL_TRIANGLES, sn.num_elements, GL_UNSIGNED_INT, (void *) nullptr);
     CHECK_GL_ERROR("Render")
 
     //
     // Update geometry
     //
     hf.Simulate();
-    generate_geometry(hf, col_width, col_depth,vertex_data, index_data);
+    gh.GenerateGeometry(hf, vertex_data, index_data);
     load_geometry(vao, vbo, ebo, vertex_data, index_data);
 
     //
@@ -434,3 +313,4 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
   glfwTerminate();
   return 0;
 }
+
