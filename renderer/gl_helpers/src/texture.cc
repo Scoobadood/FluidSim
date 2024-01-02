@@ -61,7 +61,8 @@ Texture::BindToTextureUnit(uint32_t tu) {
     return;
   }
 
-  glBindTexture(GL_TEXTURE0 + tu, texture_id_);
+  glActiveTexture(GL_TEXTURE0+tu);
+  glBindTexture(GL_TEXTURE_2D, texture_id_);
 }
 
 void
