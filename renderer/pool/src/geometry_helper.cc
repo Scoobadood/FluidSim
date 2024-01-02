@@ -129,13 +129,13 @@ void GeometryHelper::AddZPlane(float z, float normal_z,
 
 }
 
-void GeometryHelper::AddSlab(float min_x, float max_x,
-                             float min_y, float max_y,
-                             float min_z, float max_z,
-                             float r, float g, float b,
-                             const std::string& texture,
-                             std::vector<float> &vertex_data,
-                             std::vector<uint32_t> &index_data) const {
+void GeometryHelper::AddBlock(float min_x, float max_x,
+                              float min_y, float max_y,
+                              float min_z, float max_z,
+                              float r, float g, float b,
+                              const std::string& texture,
+                              std::vector<float> &vertex_data,
+                              std::vector<uint32_t> &index_data) const {
   // Left face
   AddXPlane(min_x, -1, min_y, max_y, min_z, max_z, r, g, b, texture,vertex_data, index_data);
   // Front face
@@ -170,7 +170,7 @@ void GeometryHelper::GenerateGeometry(const HeightField &hf, std::vector<float> 
       auto max_x = min_x + column_width_;
       auto max_y = heights[height_idx];
 
-      AddSlab(min_x, max_x, min_y, max_y, min_z, max_z, 0.0, 0.3, 0.8, "water", vertex_data, index_data);
+      AddBlock(min_x, max_x, min_y, max_y, min_z, max_z, 0.0, 0.3, 0.8, "water", vertex_data, index_data);
 
       min_x += column_width_;
       height_idx++;
@@ -180,40 +180,40 @@ void GeometryHelper::GenerateGeometry(const HeightField &hf, std::vector<float> 
 
   // Generate the pool surrounds geometry
   // Left wall
-  AddSlab(-(total_width / 2.0f) - column_width_, -(total_width / 2.0f),
-          0, 2.0f,
-          -(total_depth / 2.0f), (total_depth / 2.0f),
-          6.0, 6.0, 6.0, "concrete", vertex_data, index_data
+  AddBlock(-(total_width / 2.0f) - column_width_, -(total_width / 2.0f),
+           0, 2.0f,
+           -(total_depth / 2.0f), (total_depth / 2.0f),
+           6.0, 6.0, 6.0, "concrete", vertex_data, index_data
   );
   // Back wall
-  AddSlab(-(total_width / 2.0f) - column_width_, (total_width / 2.0f) + column_width_,
-          0, 2.0f,
-          -(total_depth / 2.0f) - column_depth_, -(total_depth / 2.0f),
-          6.0, 6.0, 6.0, "concrete", vertex_data, index_data
+  AddBlock(-(total_width / 2.0f) - column_width_, (total_width / 2.0f) + column_width_,
+           0, 2.0f,
+           -(total_depth / 2.0f) - column_depth_, -(total_depth / 2.0f),
+           6.0, 6.0, 6.0, "concrete", vertex_data, index_data
   );
   // Right wall
-  AddSlab((total_width / 2.0f), (total_width / 2.0f) + column_width_,
-          0, 2.0f,
-          -(total_depth / 2.0f), (total_depth / 2.0f),
-          6.0, 6.0, 6.0, "concrete", vertex_data, index_data
+  AddBlock((total_width / 2.0f), (total_width / 2.0f) + column_width_,
+           0, 2.0f,
+           -(total_depth / 2.0f), (total_depth / 2.0f),
+           6.0, 6.0, 6.0, "concrete", vertex_data, index_data
   );
   // Base slab
-  AddSlab(-(total_width / 2.0f) - column_width_, (total_width / 2.0f) + column_width_,
-          -0.2f, 0.0f,
-          -(total_depth / 2.0f) - column_depth_, (total_depth / 2.0f),
-          6.0, 6.0, 6.0, "tiles", vertex_data, index_data
+  AddBlock(-(total_width / 2.0f) - column_width_, (total_width / 2.0f) + column_width_,
+           -0.2f, 0.0f,
+           -(total_depth / 2.0f) - column_depth_, (total_depth / 2.0f),
+           6.0, 6.0, 6.0, "tiles", vertex_data, index_data
   );
 }
 
-GeometryHelper::StorageNeeds GeometryHelper::ComputeStorageNeeds(const HeightField &hf) const {
+GeometryHelper::MetaData GeometryHelper::ComputeStorageNeeds(const HeightField &hf) const {
   const uint32_t VERTS_PER_CUBE = 6 /* faces */ * 4 /* vertices per face */;
-  const uint32_t BYTES_PER_VERTEX = 3 /* floats */ * sizeof(float) /* bytes per float */;
-  const uint32_t BYTES_PER_NORMAL = 3 /* floats */ * sizeof(float) /* bytes per float */;
+  const uint32_t BYTES_PER_VERTEX = 3 /* x y z */ * sizeof(float) /* bytes per float */;
+  const uint32_t BYTES_PER_NORMAL = 3 /* nx ny nz */ * sizeof(float) /* bytes per float */;
   const uint32_t BYTES_PER_COLOUR = 3 /* rgb */ * sizeof(float) /* bytes per float */;
-  const uint32_t BYTES_PER_TEXTURE_COORD = 2 /* floats */ * sizeof(float) /* bytes per float */;
+  const uint32_t BYTES_PER_TEXTURE_COORD = 2 /* u v */ * sizeof(float) /* bytes per float */;
   const uint32_t INDICES_PER_CUBE = 2 /* triangles per face */ * 6 /* faces */ * 3 /*indices per triangle */;
 
-  StorageNeeds s{};
+  MetaData s{};
   s.position_data_size = BYTES_PER_VERTEX;
   s.normal_data_size = with_normals_ ? BYTES_PER_NORMAL : 0;
   s.texture_coord_size = with_textures_ ? BYTES_PER_TEXTURE_COORD : 0;
@@ -222,11 +222,12 @@ GeometryHelper::StorageNeeds GeometryHelper::ComputeStorageNeeds(const HeightFie
 
   s.vertex_storage_sz_bytes = VERTS_PER_CUBE * s.bytes_per_vertex * hf.DimZ() * hf.DimX();
   s.index_storage_sz_bytes = (long) (INDICES_PER_CUBE * sizeof(uint32_t) * hf.DimZ() * hf.DimX());
-  s.num_elements = INDICES_PER_CUBE * hf.DimZ() * hf.DimX();
+  s.total_elements = INDICES_PER_CUBE * hf.DimZ() * hf.DimX();
 
   // Add in pool walls.
   s.vertex_storage_sz_bytes += (4 * VERTS_PER_CUBE * s.bytes_per_vertex);
   s.index_storage_sz_bytes += (4 * INDICES_PER_CUBE * sizeof(uint32_t));
-  s.num_elements += INDICES_PER_CUBE * 4;
+  s.water_elements = s.total_elements;
+  s.total_elements += INDICES_PER_CUBE * 4;
   return s;
 }

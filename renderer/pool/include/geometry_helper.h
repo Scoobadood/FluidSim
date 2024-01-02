@@ -18,7 +18,7 @@ public:
                  bool with_textures = false
   );
 
-  struct StorageNeeds {
+  struct MetaData {
     long vertex_storage_sz_bytes;
     long index_storage_sz_bytes;
     int32_t position_data_size;
@@ -26,13 +26,14 @@ public:
     int32_t colour_data_size;
     int32_t texture_coord_size;
     int32_t bytes_per_vertex;
-    int32_t num_elements;
+    int32_t total_elements;
+    int32_t water_elements;
   };
 
   void GenerateGeometry(const HeightField &hf, std::vector<float> &vertex_data,
                         std::vector<uint32_t> &index_data) const;
 
-  StorageNeeds ComputeStorageNeeds(const HeightField &hf) const;
+  MetaData ComputeStorageNeeds(const HeightField &hf) const;
 
 protected:
   void AddXPlane(float x, float normal_x,
@@ -59,13 +60,13 @@ protected:
                  std::vector<float> &vertex_data,
                  std::vector<uint32_t> &index_data) const;
 
-  void AddSlab(float min_x, float max_x,
-               float min_y, float max_y,
-               float min_z, float max_z,
-               float r, float g, float b,
-               const std::string& texture,
-               std::vector<float> &vertex_data,
-               std::vector<uint32_t> &index_data) const;
+  void AddBlock(float min_x, float max_x,
+                float min_y, float max_y,
+                float min_z, float max_z,
+                float r, float g, float b,
+                const std::string& texture,
+                std::vector<float> &vertex_data,
+                std::vector<uint32_t> &index_data) const;
 
 private:
   float column_width_;

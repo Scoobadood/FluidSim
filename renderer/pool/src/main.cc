@@ -155,7 +155,7 @@ GLFWwindow *initialise() {
  * ******************************************************************************************/
 
 void
-create_geometry_buffers(const GeometryHelper::StorageNeeds &s,//
+create_geometry_buffers(const GeometryHelper::MetaData &s,//
                         GLuint &vao,//
                         GLuint &vbo,//
                         GLuint &ebo) {
@@ -225,14 +225,9 @@ std::shared_ptr<Shader> init_shader() {
   auto shader = Shader::from_files("/Users/dave/Projects/FluidSim/renderer/pool/shaders/lighting.vert",
                                    "/Users/dave/Projects/FluidSim/renderer/pool/shaders/lighting.frag");
   shader->use();
-  shader->set_uniform("light_dir", glm::vec3(0, -10, -10));
+  shader->set_uniform("light_dir", glm::vec3(2, -10, 15));
   shader->set_uniform("light_intensity", 1.0f);
 
-  shader->set_uniform("kd", 0.8f);
-  shader->set_uniform("ks", 0.5f);
-  shader->set_uniform("ka", 0.1f);
-  shader->set_uniform("alpha", 10.0f);
-  shader->set_uniform("object_colour", glm::vec3{0.0f, 0.3f, 0.8f});
 
   CHECK_GL_ERROR("Create shader")
 
@@ -304,7 +299,8 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
 
     // Update view
     glm::mat4 view{1};
-    view = glm::translate(view, glm::vec3(0, 0, -15));
+    view = glm::translate(view, glm::vec3(0, -2.5, -20));
+    view = glm::rotate_slow(view,(float)M_PI / 9.0f,{1,0,0});
 
     glm::mat4 model = glm::mat4(1.0);
     //  model = glm::translate(model,glm::vec3(0,0,-10));
@@ -319,8 +315,19 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
     shader->set_uniform("model", model);
     shader->set_uniform("combi_texture", 0);
 
-    glDrawElements(GL_TRIANGLES, sn.num_elements, GL_UNSIGNED_INT, (void *) nullptr);
-    CHECK_GL_ERROR("Render")
+    shader->set_uniform("kd", 0.8f);
+    shader->set_uniform("ks", 0.9f);
+    shader->set_uniform("ka", 0.2f);
+    shader->set_uniform("alpha", 30.0f);
+    glDrawElements(GL_TRIANGLES, sn.water_elements, GL_UNSIGNED_INT, (void *) nullptr);
+    CHECK_GL_ERROR("Render Water")
+
+    shader->set_uniform("kd", 0.8f);
+    shader->set_uniform("ks", 0.1f);
+    shader->set_uniform("ka", 0.3f);
+    shader->set_uniform("alpha", 1.f);
+    glDrawElements(GL_TRIANGLES, sn.total_elements - sn.water_elements, GL_UNSIGNED_INT, (void *) (sn.water_elements * sizeof(GLuint)));
+    CHECK_GL_ERROR("Render Pool")
 
     //
     // Update geometry

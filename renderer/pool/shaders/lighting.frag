@@ -37,7 +37,7 @@ void main() {
     vec3 spec_light    = ks * spec_coeff * light_intensity * vec3(1,1,1);
     vec3 ambient_light = ka * light_intensity * base_colour;
     vec3 diff_light    = kd * n_dot_w * light_intensity * base_colour;
-    vec3 l1 = diff_light + spec_light;
+    vec3 l1 = diff_light + spec_light + ambient_light;
 
     frag_colour = vec4(l1, 1.0);
 }
