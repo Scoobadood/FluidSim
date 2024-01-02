@@ -9,7 +9,6 @@
 #include "shader.h"
 #include "glm/detail/type_quat.hpp"
 #include "glm/gtc/quaternion.hpp"
-#include "trackball.h"
 
 const int32_t POS_ATTR = 0;
 const int32_t NORM_ATTR = 1;
@@ -136,17 +135,20 @@ GLFWwindow *initialise() {
 
 /* ******************************************************************************************
  *  Generate the geometry for the scene.
- *  We will have N columns, each of which is WxD cross-section and H[n] high
+ *  We will have R rows and C columns, each of which is WxD cross-section and H[n] high
  *  The columns will be adjacent and centred on the origin.
  * ******************************************************************************************/
-void generate_geometry(float width, float depth, const std::vector<float> &heights,
+void generate_geometry(uint32_t num_rows,
+                       uint32_t num_cols,
+                       const std::vector<float> &heights,
+                       float width, float depth,
                        std::vector<float> &vertex_data,
                        std::vector<uint32_t> &indices) {
-  auto total_width = (float) heights.size() * width;
-  const auto min_y = 0.0f;
-  const auto min_z = -(depth / 2.0f);
-  const auto max_z = (depth / 2.0f);
-  auto min_x = -(total_width / 2.0f);
+  if (num_cols * num_rows != heights.size()) {
+    auto msg = fmt::format("Height data is inaccurate R: {}, C: {}, H: {}", num_rows, num_cols, heights.size());
+    spdlog::error(msg);
+    throw std::runtime_error(msg);
+  }
 
   uint32_t base_indices[36] = {0, 1, 2,
                                0, 2, 3,
@@ -162,62 +164,78 @@ void generate_geometry(float width, float depth, const std::vector<float> &heigh
                                20, 22, 23
   };
 
+  auto total_width = (float) num_cols * width;
+  auto total_depth = (float) num_rows * depth;
+  const auto min_y = 0.0f;
+
+
   auto base_vertex = 0;
-  for (float max_y: heights) {
-    auto max_x = min_x + width;
-    // Left face
-    vertex_data.insert(vertex_data.end(), {min_x, max_y, max_z, -1.0f, 0.0f, 0.0f});
-    vertex_data.insert(vertex_data.end(), {min_x, max_y, min_z, -1.0f, 0.0f, 0.0f});
-    vertex_data.insert(vertex_data.end(), {min_x, min_y, min_z, -1, 0, 0});
-    vertex_data.insert(vertex_data.end(), {min_x, min_y, max_z, -1, 0, 0});
-    // Front face
-    vertex_data.insert(vertex_data.end(), {min_x, max_y, min_z, 0.0f, 0.0f, -1.0f});
-    vertex_data.insert(vertex_data.end(), {max_x, max_y, min_z, 0.0f, 0.0f, -1.0f});
-    vertex_data.insert(vertex_data.end(), {max_x, min_y, min_z, 0.0f, 0.0f, -1.0f});
-    vertex_data.insert(vertex_data.end(), {min_x, min_y, min_z, 0.0f, 0.0f, -1.0f});
-    // Right face
-    vertex_data.insert(vertex_data.end(), {max_x, max_y, min_z, 1.0f, 0.0f, 0.0f});
-    vertex_data.insert(vertex_data.end(), {max_x, max_y, max_z, 1.0f, 0.0f, 0.0f});
-    vertex_data.insert(vertex_data.end(), {max_x, min_y, max_z, 1.0f, 0.0f, 0.0f});
-    vertex_data.insert(vertex_data.end(), {max_x, min_y, min_z, 1.0f, 0.0f, 0.0f});
-    // Back face
-    vertex_data.insert(vertex_data.end(), {max_x, max_y, max_z, 0.0f, 0.0f, 1.0f});
-    vertex_data.insert(vertex_data.end(), {min_x, max_y, max_z, 0.0f, 0.0f, 1.0f});
-    vertex_data.insert(vertex_data.end(), {min_x, min_y, max_z, 0.0f, 0.0f, 1.0f});
-    vertex_data.insert(vertex_data.end(), {max_x, min_y, max_z, 0.0f, 0.0f, 1.0f});
-    // Top face
-    vertex_data.insert(vertex_data.end(), {min_x, max_y, max_z, 0.0f, 1.0f, 0.0f});
-    vertex_data.insert(vertex_data.end(), {max_x, max_y, max_z, 0.0f, 1.0f, 0.0f});
-    vertex_data.insert(vertex_data.end(), {max_x, max_y, min_z, 0.0f, 1.0f, 0.0f});
-    vertex_data.insert(vertex_data.end(), {min_x, max_y, min_z, 0.0f, 1.0f, 0.0f});
-    // Bottom face
-    vertex_data.insert(vertex_data.end(), {min_x, min_y, min_z, 0.0f, -1.0f, 0.0f});
-    vertex_data.insert(vertex_data.end(), {max_x, min_y, min_z, 0.0f, -1.0f, 0.0f});
-    vertex_data.insert(vertex_data.end(), {max_x, min_y, max_z, 0.0f, -1.0f, 0.0f});
-    vertex_data.insert(vertex_data.end(), {min_x, min_y, max_z, 0.0f, -1.0f, 0.0f});
+  auto height_idx = 0;
+  auto min_z = -(total_depth / 2.0f);
+  for (auto y = 0; y < num_rows; ++y) {
+    auto min_x = -(total_width / 2.0f);
+    auto max_z = min_z + depth;
+    for (auto x = 0; x < num_cols; ++x) {
+      auto max_x = min_x + width;
+      auto max_y = heights[height_idx];
+
+      // Left face
+      vertex_data.insert(vertex_data.end(), {min_x, max_y, max_z, -1.0f, 0.0f, 0.0f});
+      vertex_data.insert(vertex_data.end(), {min_x, max_y, min_z, -1.0f, 0.0f, 0.0f});
+      vertex_data.insert(vertex_data.end(), {min_x, min_y, min_z, -1, 0, 0});
+      vertex_data.insert(vertex_data.end(), {min_x, min_y, max_z, -1, 0, 0});
+      // Front face
+      vertex_data.insert(vertex_data.end(), {min_x, max_y, min_z, 0.0f, 0.0f, -1.0f});
+      vertex_data.insert(vertex_data.end(), {max_x, max_y, min_z, 0.0f, 0.0f, -1.0f});
+      vertex_data.insert(vertex_data.end(), {max_x, min_y, min_z, 0.0f, 0.0f, -1.0f});
+      vertex_data.insert(vertex_data.end(), {min_x, min_y, min_z, 0.0f, 0.0f, -1.0f});
+      // Right face
+      vertex_data.insert(vertex_data.end(), {max_x, max_y, min_z, 1.0f, 0.0f, 0.0f});
+      vertex_data.insert(vertex_data.end(), {max_x, max_y, max_z, 1.0f, 0.0f, 0.0f});
+      vertex_data.insert(vertex_data.end(), {max_x, min_y, max_z, 1.0f, 0.0f, 0.0f});
+      vertex_data.insert(vertex_data.end(), {max_x, min_y, min_z, 1.0f, 0.0f, 0.0f});
+      // Back face
+      vertex_data.insert(vertex_data.end(), {max_x, max_y, max_z, 0.0f, 0.0f, 1.0f});
+      vertex_data.insert(vertex_data.end(), {min_x, max_y, max_z, 0.0f, 0.0f, 1.0f});
+      vertex_data.insert(vertex_data.end(), {min_x, min_y, max_z, 0.0f, 0.0f, 1.0f});
+      vertex_data.insert(vertex_data.end(), {max_x, min_y, max_z, 0.0f, 0.0f, 1.0f});
+      // Top face
+      vertex_data.insert(vertex_data.end(), {min_x, max_y, max_z, 0.0f, 1.0f, 0.0f});
+      vertex_data.insert(vertex_data.end(), {max_x, max_y, max_z, 0.0f, 1.0f, 0.0f});
+      vertex_data.insert(vertex_data.end(), {max_x, max_y, min_z, 0.0f, 1.0f, 0.0f});
+      vertex_data.insert(vertex_data.end(), {min_x, max_y, min_z, 0.0f, 1.0f, 0.0f});
+      // Bottom face
+      vertex_data.insert(vertex_data.end(), {min_x, min_y, min_z, 0.0f, -1.0f, 0.0f});
+      vertex_data.insert(vertex_data.end(), {max_x, min_y, min_z, 0.0f, -1.0f, 0.0f});
+      vertex_data.insert(vertex_data.end(), {max_x, min_y, max_z, 0.0f, -1.0f, 0.0f});
+      vertex_data.insert(vertex_data.end(), {min_x, min_y, max_z, 0.0f, -1.0f, 0.0f});
 
 
-    for (unsigned int base_index: base_indices) {
-      indices.push_back(base_index + base_vertex);
+      for (unsigned int base_index: base_indices) {
+        indices.push_back(base_index + base_vertex);
+      }
+      base_vertex += 24;
+
+      min_x += width;
+      height_idx++;
     }
-    base_vertex += 24;
-
-    min_x += width;
+    min_z += depth;
   }
-
 }
 
 /* ******************************************************************************************
  *  Create the geometry for the scene
  * ******************************************************************************************/
-void create_geometry(std::vector<float> &col_heights, float col_width, float col_depth, GLuint &vao, GLuint &vbo,
-                     GLuint &ebo, GLsizei &num_elements) {
+void
+create_geometry(uint32_t num_rows, uint32_t num_cols, std::vector<float> &col_heights, float col_width, float col_depth,
+                GLuint &vao, GLuint &vbo,
+                GLuint &ebo, GLsizei &num_elements) {
   spdlog::info("Creating geometry");
 
   std::vector<float> vertex_data;
   std::vector<uint32_t> index_data;
   std::vector<float> heights;
-  generate_geometry(col_width, col_depth, col_heights, vertex_data, index_data);
+  generate_geometry(num_cols, num_rows, col_heights, col_width, col_depth, vertex_data, index_data);
 
   // VAO
   glGenVertexArrays(1, &vao);
@@ -251,11 +269,11 @@ void create_geometry(std::vector<float> &col_heights, float col_width, float col
   CHECK_GL_ERROR("create geometry")
 }
 
-void reload_geometry(GLuint vao, GLuint vbo, std::vector<float> &new_heights, float col_width, float col_depth) {
+void reload_geometry(GLuint vao, GLuint vbo, uint32_t num_rows, uint32_t num_cols, std::vector<float> &new_heights,
+                     float col_width, float col_depth) {
   std::vector<float> vertex_data;
   std::vector<uint32_t> index_data;
-  generate_geometry(col_width, col_depth, new_heights, vertex_data, index_data);
-
+  generate_geometry(num_rows, num_cols, new_heights, col_width, col_depth, vertex_data, index_data);
 
   glBindVertexArray(vao);
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -272,27 +290,37 @@ void reload_geometry(GLuint vao, GLuint vbo, std::vector<float> &new_heights, fl
 /* ******************************************************************************************
  *  Height field management
  * ******************************************************************************************/
-std::vector<float> init_height_field(uint32_t num_columns) {
+std::vector<float> init_height_field(uint32_t num_rows, uint32_t num_columns) {
   std::vector<float> heights;
 
-  heights.reserve(num_columns);
-  auto theta = -(float) M_PI;
-  auto d_theta = (2 * (float) M_PI) / (float) num_columns;
-  for (auto i = 0; i < num_columns; ++i) {
-    heights.push_back(1.1f + std::cosf(theta));
-    theta += d_theta;
+  heights.reserve(num_columns * num_rows);
+  auto mid_r = num_rows/2.0f;
+  auto mid_c = num_columns/2.0f;
+  for (auto r = 0; r < num_rows; ++r) {
+    for (auto c = 0; c < num_columns; ++c) {
+      auto hx= 1.0f -(std::fabsf((float)r-mid_r))/(float)num_rows;
+      auto hy= 1.0f -(std::fabsf((float)c-mid_c))/(float)num_columns;
+      heights.push_back(hx+hy);
+    }
   }
 
   return heights;
 }
 
-void adjust_height_field(std::vector<float> &heights, std::vector<float> &v_height) {
-  for (auto i = 0; i < v_height.size(); ++i) {
-    auto l = (i > 0) ? heights[i - 1] : heights[i];
-    auto r = (i < heights.size() - 1) ? heights[i + 1] : heights[i];
+void
+adjust_height_field(uint32_t num_rows, uint32_t num_cols, std::vector<float> &heights, std::vector<float> &v_height) {
+  for (auto r = 0; r < num_rows; ++r) {
+    for (auto c = 0; c < num_cols; ++c) {
 
-    v_height[i] += ((l + r) * 0.5f - heights[i]);
-    v_height[i] *= 0.99f;
+      auto idx = r * num_cols + c;
+      auto left = (c > 0) ? heights[idx - 1] : heights[idx];
+      auto right = (c < num_cols - 1) ? heights[idx + 1] : heights[idx];
+      auto up = (r > 0) ? heights[idx - num_cols] : heights[idx];
+      auto down = (r < num_rows - 1) ? heights[idx + num_cols] : heights[idx];
+
+      v_height[idx] += ((left + right + up + down) * 0.25f - heights[idx]);
+      v_height[idx] *= 0.99f;
+    }
   }
   for (auto i = 0; i < heights.size(); ++i) {
     heights[i] += v_height[i];
@@ -328,11 +356,11 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
   GLuint vao, vbo, ebo;
   GLsizei num_elements;
 
-  auto heights = init_height_field(20);
-  std::vector<float> v_height(20, 0);
+  auto heights = init_height_field(15, 20);
+  std::vector<float> v_height(15 * 20, 0);
   auto col_width = 0.25f;
   auto col_depth = 0.25f;
-  create_geometry(heights, col_width, col_depth, vao, vbo, ebo, num_elements);
+  create_geometry(15, 20, heights, col_width, col_depth, vao, vbo, ebo, num_elements);
 
   //
   // Create a shader
@@ -390,8 +418,8 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
     //
     // Update geometry
     //
-    adjust_height_field(heights, v_height);
-    reload_geometry(vao, vbo, heights, col_width, col_depth);
+    adjust_height_field(15, 20, heights, v_height);
+    reload_geometry(vao, vbo, 15, 20, heights, col_width, col_depth);
 
     //
     // End of frame
