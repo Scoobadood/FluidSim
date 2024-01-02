@@ -1,13 +1,13 @@
-add_library(Lesson4 SHARED
+add_library(common SHARED
         object.cc include/object.h
         )
 
-target_include_directories(Lesson4
+target_include_directories(common
         PUBLIC
         include
         )
 
-target_link_libraries(Lesson4
+target_link_libraries(common
         PUBLIC
         ${OpenGL_LIBRARY}
         GLHelpers

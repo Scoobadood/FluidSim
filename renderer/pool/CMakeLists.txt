@@ -20,6 +20,7 @@ target_include_directories(test_glfw
 target_link_libraries(test_glfw
         PRIVATE
         glfw
-        Lesson4
+        GLHelpers
+        common
         GLEW::GLEW
 )
