@@ -10,6 +10,8 @@ add_executable(test_glfw
         src/main.cc include/main.h
         include/scene_data.h
         src/height_field_sim.cc
+        include/geometry_helper.h
+        src/geometry_helper.cc
 )
 
 target_include_directories(test_glfw
