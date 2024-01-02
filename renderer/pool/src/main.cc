@@ -15,7 +15,8 @@
 
 const int32_t POS_ATTR = 0;
 const int32_t NORM_ATTR = 1;
-const int32_t TEXT_ATTR = 2;
+const int32_t COLR_ATTR = 2;
+const int32_t TEXT_ATTR = 3;
 
 /* ******************************************************************************************
  *  Error macro
@@ -179,6 +180,12 @@ create_geometry_buffers(const GeometryHelper::StorageNeeds &s,//
     offset += s.normal_data_size;
   }
 
+  if (s.colour_data_size > 0) {
+    glEnableVertexAttribArray(COLR_ATTR);
+    glVertexAttribPointer(COLR_ATTR, 3, GL_FLOAT, GL_FALSE, s.bytes_per_vertex, (GLvoid *) offset);
+    offset += s.colour_data_size;
+  }
+
   if (s.texture_coord_size > 0) {
     glEnableVertexAttribArray(TEXT_ATTR);
     glVertexAttribPointer(TEXT_ATTR, 2, GL_FLOAT, GL_FALSE, s.bytes_per_vertex, (GLvoid *) offset);
@@ -256,9 +263,9 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
 
 
   // Set up Height field
-  HeightField hf(15, 20);
+  HeightField hf(30, 40);
   hf.Init();
-  GeometryHelper gh{0.25f, 0.25f, true, false};
+  GeometryHelper gh{0.25f, 0.25f, true, true};
 
   glfwSetWindowUserPointer(window, &hf);
 

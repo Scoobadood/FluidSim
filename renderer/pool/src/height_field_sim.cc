@@ -43,7 +43,7 @@ void HeightField::Simulate() {
       auto down = (z < dim_z_ - 1) ? heights_[idx + dim_x_] : heights_[idx];
 
       velocities_[idx] += ((left + right + up + down) * 0.25f - heights_[idx]);
-      velocities_[idx] *= 0.99f;
+      velocities_[idx] *= 0.995f;
 
       idx++;
     }

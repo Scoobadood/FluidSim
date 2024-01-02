@@ -14,6 +14,7 @@ public:
   GeometryHelper(float column_width, //
                  float column_height, //
                  bool with_normals = true,//
+                 bool with_colours = false,//
                  bool with_textures = false
   );
 
@@ -22,6 +23,7 @@ public:
     long index_storage_sz_bytes;
     int32_t position_data_size;
     int32_t normal_data_size;
+    int32_t colour_data_size;
     int32_t texture_coord_size;
     int32_t bytes_per_vertex;
     int32_t num_elements;
@@ -33,17 +35,39 @@ public:
   StorageNeeds ComputeStorageNeeds(const HeightField &hf) const;
 
 protected:
-  static void AddSlab(float min_x, float max_x,
+  void AddXPlane(float x, float normal_x,
+                 float min_y, float max_y,
+                 float min_z, float max_z,
+                 float r, float g, float b,
+                 std::vector<float> &vertex_data,
+                 std::vector<uint32_t> &index_data) const;
+
+  void AddYPlane(float y, float normal_y,
+                 float min_x, float max_x,
+                 float min_z, float max_z,
+                 float r, float g, float b,
+                 std::vector<float> &vertex_data,
+                 std::vector<uint32_t> &index_data) const;
+
+  void AddZPlane(float z, float normal_z,
+                 float min_x, float max_x,
+                 float min_y, float max_y,
+                 float r, float g, float b,
+                 std::vector<float> &vertex_data,
+                 std::vector<uint32_t> &index_data) const;
+
+  void AddSlab(float min_x, float max_x,
                float min_y, float max_y,
                float min_z, float max_z,
                float r, float g, float b,
                std::vector<float> &vertex_data,
-               std::vector<uint32_t> &index_data) ;
+               std::vector<uint32_t> &index_data) const;
 
 private:
   float column_width_;
   float column_depth_;
   bool with_normals_;
+  bool with_colours_;
   bool with_textures_;
 };
 

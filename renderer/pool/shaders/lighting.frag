@@ -4,6 +4,7 @@ layout (location=0) out vec4 frag_colour;
 
 in vec3 frag_normal;
 in vec3 frag_position;
+in vec3 colour;
 
 uniform float kd;               // Diffuse constant
 uniform float ka;               // Ambient constant
@@ -29,8 +30,8 @@ void main() {
     float spec_coeff   = pow(r_dot_v, alpha);
 
     vec3 spec_light    = ks * spec_coeff * light_intensity * vec3(1,1,1);
-    vec3 ambient_light = ka * light_intensity * object_colour;
-    vec3 diff_light    = kd * n_dot_w * light_intensity * object_colour;
+    vec3 ambient_light = ka * light_intensity * colour;
+    vec3 diff_light    = kd * n_dot_w * light_intensity * colour;
     vec3 l1 = diff_light + spec_light;
 
     frag_colour = vec4(l1, 1.0);
