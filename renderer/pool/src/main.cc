@@ -106,6 +106,12 @@ void key_callback(GLFWwindow *window, int key,//
   if (GLFW_KEY_R == key) {
     // Reset the simulation
     ((HeightField *) glfwGetWindowUserPointer(window))->Init(HeightField::PULSE);
+  } else if (GLFW_KEY_W == key) {
+    // Reset the simulation
+    ((HeightField *) glfwGetWindowUserPointer(window))->Init(HeightField::WAVE);
+  } else if (GLFW_KEY_S == key) {
+    // Reset the simulation
+    ((HeightField *) glfwGetWindowUserPointer(window))->Init(HeightField::CUBE);
   }
 }
 
@@ -300,7 +306,7 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
     // Update view
     glm::mat4 view{1};
     view = glm::translate(view, glm::vec3(0, -2.5, -20));
-    view = glm::rotate_slow(view,(float)M_PI / 9.0f,{1,0,0});
+    view = glm::rotate_slow(view, (float) M_PI / 9.0f, {1, 0, 0});
 
     glm::mat4 model = glm::mat4(1.0);
     //  model = glm::translate(model,glm::vec3(0,0,-10));
@@ -326,7 +332,8 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
     shader->set_uniform("ks", 0.1f);
     shader->set_uniform("ka", 0.3f);
     shader->set_uniform("alpha", 1.f);
-    glDrawElements(GL_TRIANGLES, sn.total_elements - sn.water_elements, GL_UNSIGNED_INT, (void *) (sn.water_elements * sizeof(GLuint)));
+    glDrawElements(GL_TRIANGLES, sn.total_elements - sn.water_elements, GL_UNSIGNED_INT,
+                   (void *) (sn.water_elements * sizeof(GLuint)));
     CHECK_GL_ERROR("Render Pool")
 
     //

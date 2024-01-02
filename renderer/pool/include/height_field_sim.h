@@ -10,7 +10,9 @@
 class HeightField {
 public:
   enum InitMode {
-    PULSE
+    PULSE,
+    WAVE,
+    CUBE
   };
   HeightField(uint32_t dim_x, uint32_t dim_z);
   void Init(InitMode mode);

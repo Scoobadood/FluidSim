@@ -15,15 +15,39 @@ HeightField::HeightField(uint32_t dim_x, uint32_t dim_z) //
 void HeightField::Init(InitMode mode) {
   heights_.clear();
 
-  float step_x = dim_x_ / 8.0f;
-  float step_z = dim_z_ / 8.0f;
-  for (auto z = 0; z < dim_z_; ++z) {
-    for (auto x = 0; x < dim_x_; ++x) {
-      float adj_x = (x / step_x) - 2.0f;
-      float adj_z = (z / step_z) - 2.0f;
-      auto height = std::expf(-(adj_x * adj_x) - (adj_z * adj_z));
-      height = 1.0f + std::fmax(height, 0.0f)*2;
-      heights_.push_back( height);
+  if (PULSE == mode) {
+    float step_x = dim_x_ / 8.0f;
+    float step_z = dim_z_ / 8.0f;
+    for (auto z = 0; z < dim_z_; ++z) {
+      for (auto x = 0; x < dim_x_; ++x) {
+        float adj_x = (x / step_x) - 2.0f;
+        float adj_z = (z / step_z) - 2.0f;
+        auto height = std::expf(-(adj_x * adj_x) - (adj_z * adj_z));
+        height = 1.0f + std::fmax(height, 0.0f) * 2;
+        heights_.push_back(height);
+      }
+    }
+  } else if (WAVE == mode) {
+    float step_x = dim_x_ / 8.0f;
+    for (auto z = 0; z < dim_z_; ++z) {
+      for (auto x = 0; x < dim_x_; ++x) {
+        float adj_x = (x / step_x) - 2.0f;
+        auto height = std::expf(-(adj_x * adj_x)-1);
+        height = 1.0f + std::fmax(height, 0.0f) * 2;
+        heights_.push_back(height);
+      }
+    }
+  } else {
+    for (auto z = 0; z < dim_z_; ++z) {
+      for (auto x = 0; x < dim_x_; ++x) {
+        auto height = 1.0f +
+                      (((x > dim_x_ * .25f) &&
+                        (x < dim_x_ * .75f) &&
+                        (z > dim_z_ * .25f) &&
+                        (z < dim_z_ * .75f)) ? 1.0f : 0.0f);
+
+        heights_.push_back(height);
+      }
     }
   }
 
