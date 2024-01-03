@@ -198,8 +198,8 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
   // Create initial geometry
   std::vector<float> scene_verts;
   std::vector<uint32_t> scene_indices;
-  load_model_from_file("/Users/dave/Projects/FluidSim/renderer/pool/assets/scene.ply", false, false, false, scene_verts, scene_indices);
-  Mesh scene_mesh{0,-1,-1,-3};
+  load_model_from_file("/Users/dave/Projects/FluidSim/renderer/pool/assets/pool_scene.ply", false, true, false, scene_verts, scene_indices);
+  Mesh scene_mesh{0,1,-1,-3};
   scene_mesh.SetVertexData(scene_verts);
   scene_mesh.SetIndexData(scene_indices);
 
@@ -220,7 +220,7 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
     glfwGetFramebufferSize(window, &width, &height);
     auto ratio = (float) width / (float) height;
     glViewport(0, 0, width, height);
-    glm::mat4 project = glm::perspective(glm::radians(35.0f), ratio, 0.1f, 35.0f);
+    glm::mat4 project = glm::perspective(glm::radians(35.0f), ratio, 0.1f, 100.0f);
 
     glEnable(GL_DEPTH_TEST);
     glClearColor(0.3, 0.3, 0.3, 1.0);
@@ -231,7 +231,7 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
 
     // Update view
     glm::mat4 view{1};
-    view = glm::translate(view, glm::vec3(0, -2.5, -20));
+    view = glm::translate(view, glm::vec3(0, -5, -40));
     view = view * g_model_rot;
 
     glm::mat4 model = glm::mat4(1.0);

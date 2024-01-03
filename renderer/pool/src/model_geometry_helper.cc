@@ -12,13 +12,26 @@ void load_model_from_file(const std::string& ply_file_name,
   happly::PLYData plyIn(ply_file_name);
 
 // Get mesh-style data from the object
-  std::vector<std::array<double, 3>> vPos = plyIn.getVertexPositions();
-  std::vector<std::vector<size_t>> fInd = plyIn.getFaceIndices<size_t>();
+  auto vPos = plyIn.getVertexPositions();
+  auto fInd = plyIn.getFaceIndices<size_t>();
+
+  // Get normals
+  std::vector<float> nx, ny, nz;
+  if( with_normals) {
+    nx = plyIn.getElement("vertex").getProperty<float>("nx");
+    ny = plyIn.getElement("vertex").getProperty<float>("ny");
+    nz = plyIn.getElement("vertex").getProperty<float>("nz");
+  }
 
   for( auto i=0; i<vPos.size(); i++ ) {
     vertex_data.push_back((float)vPos[i][0]);
     vertex_data.push_back((float)vPos[i][1]);
     vertex_data.push_back((float)vPos[i][2]);
+    if( with_normals) {
+      vertex_data.push_back(nx[i]);
+      vertex_data.push_back( ny[i]);
+      vertex_data.push_back( nz[i]);
+    }
   }
 
   for( auto i=0; i<fInd.size(); i++ ) {
