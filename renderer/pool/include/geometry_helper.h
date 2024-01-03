@@ -31,7 +31,9 @@ public:
   };
 
   void GenerateGeometry(const HeightField &hf, std::vector<float> &vertex_data,
-                        std::vector<uint32_t> &index_data) const;
+                        std::vector<uint32_t> &index_data,
+                        bool generate_water,
+                        bool generate_scene) const;
 
   MetaData ComputeStorageNeeds(const HeightField &hf) const;
 

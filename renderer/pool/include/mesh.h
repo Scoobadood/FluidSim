@@ -17,6 +17,7 @@ public:
   ~Mesh();
 
   void Bind() const;
+  inline GLsizei NumElements() const {return num_elements_;}
 
   inline bool HasNormals() const { return normal_attr_idx_ >= 0; }
 
@@ -26,7 +27,7 @@ public:
 
   void SetVertexData(const std::vector<float> &vertex_data) const;
 
-  void SetIndexData(const std::vector<uint32_t> &indices) const;
+  void SetIndexData(const std::vector<uint32_t> &indices) ;
 
 private:
   int32_t position_attr_idx_;
@@ -36,6 +37,7 @@ private:
   GLuint vao_;
   GLuint vbo_;
   GLuint ebo_;
+  GLsizei num_elements_;
 };
 
 

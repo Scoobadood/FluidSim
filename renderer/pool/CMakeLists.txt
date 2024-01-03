@@ -13,6 +13,9 @@ add_executable(test_glfw
         src/renderer.cc include/renderer.h
         src/mesh.cpp include/mesh.h
         src/gl_error.cc  include/gl_error.h
+        src/model_geometry_helper.cc
+        include/happly.h
+        include/model_geometry_helper.h
 )
 
 target_include_directories(test_glfw

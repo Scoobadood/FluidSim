@@ -13,8 +13,8 @@
 #include "glm/ext/matrix_transform.hpp"
 #include "glm/detail/type_quat.hpp"
 #include "glm/gtc/quaternion.hpp"
-#include "renderer.h"
 #include "mesh.h"
+#include "model_geometry_helper.h"
 
 /* ******************************************************************************************
  *
@@ -182,6 +182,9 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
   glfwSetKeyCallback(window, key_callback);
 
 
+  // Create a shader
+  auto shader = init_shader();
+
   // Textures
   auto texture = std::make_shared<Texture>("/Users/dave/Projects/FluidSim/renderer/pool/assets/combo_1024x1024.jpg");
 
@@ -193,18 +196,21 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
   glfwSetWindowUserPointer(window, &hf);
 
   // Create initial geometry
-  auto sn = gh.ComputeStorageNeeds(hf);
-  Mesh mesh{0,1,-1,3};
+  std::vector<float> scene_verts;
+  std::vector<uint32_t> scene_indices;
+  load_model_from_file("/Users/dave/Projects/FluidSim/renderer/pool/assets/scene.ply", false, false, false, scene_verts, scene_indices);
+  Mesh scene_mesh{0,-1,-1,-3};
+  scene_mesh.SetVertexData(scene_verts);
+  scene_mesh.SetIndexData(scene_indices);
+
+  Mesh water_mesh{0,1,-1,3};
 
   // Generate and load the geometry
   std::vector<float> vertex_data;
   std::vector<uint32_t> index_data;
-  gh.GenerateGeometry(hf, vertex_data, index_data);
-  mesh.SetVertexData(vertex_data);
-  mesh.SetIndexData(index_data);
-
-  // Create a shader
-  auto shader = init_shader();
+  gh.GenerateGeometry(hf, vertex_data, index_data, true, false);
+  water_mesh.SetVertexData(vertex_data);
+  water_mesh.SetIndexData(index_data);
 
   g_model_rot= glm::rotate_slow(glm::mat4(1), (float) M_PI / 9.0f, {1, 0, 0});
 
@@ -221,7 +227,7 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // Bind VAO
-    mesh.Bind();
+    water_mesh.Bind();
 
     // Update view
     glm::mat4 view{1};
@@ -245,15 +251,16 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
     shader->set_uniform("ks", 0.9f);
     shader->set_uniform("ka", 0.2f);
     shader->set_uniform("alpha", 30.0f);
-    glDrawElements(GL_TRIANGLES, sn.water_elements, GL_UNSIGNED_INT, (void *) nullptr);
+    water_mesh.Bind();
+    glDrawElements(GL_TRIANGLES, water_mesh.NumElements(), GL_UNSIGNED_INT, (void *) nullptr);
     CHECK_GL_ERROR("Render Water")
 
     shader->set_uniform("kd", 0.8f);
     shader->set_uniform("ks", 0.1f);
     shader->set_uniform("ka", 0.3f);
     shader->set_uniform("alpha", 1.f);
-    glDrawElements(GL_TRIANGLES, sn.total_elements - sn.water_elements, GL_UNSIGNED_INT,
-                   (void *) (sn.water_elements * sizeof(GLuint)));
+    scene_mesh.Bind();
+    glDrawElements(GL_TRIANGLES, scene_mesh.NumElements(), GL_UNSIGNED_INT,(void*) nullptr);
     CHECK_GL_ERROR("Render Pool")
 
     //
@@ -263,9 +270,9 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
     std::chrono::duration<float, std::milli> elapsed = finish - start;
     start = finish;
     hf.Simulate(elapsed.count()/1000.0f);
-    gh.GenerateGeometry(hf, vertex_data, index_data);
+    gh.GenerateGeometry(hf, vertex_data, index_data, true, false);
 
-    mesh.SetVertexData(vertex_data);
+    water_mesh.SetVertexData(vertex_data);
 
     //
     // End of frame

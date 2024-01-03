@@ -7,6 +7,7 @@
 
 #include "mesh.h"
 #include "gl_error.h"
+
 Mesh::Mesh(int32_t position_attr_idx,
            int32_t normal_attr_idx,
            int32_t colour_attr_idx,
@@ -18,6 +19,7 @@ Mesh::Mesh(int32_t position_attr_idx,
         , vao_{0}//
         , vbo_{0}//
         , ebo_{0}//
+        , num_elements_{0}//
 {
   glGenVertexArrays(1, &vao_);
   glBindVertexArray(vao_);
@@ -67,7 +69,7 @@ Mesh::~Mesh() {
   glDeleteVertexArrays(1, &vao_);
 }
 
-void Mesh::Bind() const{
+void Mesh::Bind() const {
   glBindVertexArray(vao_);
 }
 
@@ -81,10 +83,12 @@ void Mesh::SetVertexData(const std::vector<float> &vertex_data) const {
   glBindVertexArray(0);
 }
 
-void Mesh::SetIndexData(const std::vector<uint32_t> &indices) const {
+void Mesh::SetIndexData(const std::vector<uint32_t> &indices) {
   glBindVertexArray(vao_);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo_);
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr) (indices.size() * sizeof(uint32_t)), indices.data(),
                GL_DYNAMIC_DRAW);
-
+  num_elements_ = (GLsizei) indices.size();
+  CHECK_GL_ERROR("Set index data")
+  glBindVertexArray(0);
 }
