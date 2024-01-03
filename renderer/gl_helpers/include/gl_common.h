@@ -13,5 +13,4 @@
 
 #include "glm/glm.hpp"
 
-
 #endif //UTAH_ICG_GL_COMMON_H

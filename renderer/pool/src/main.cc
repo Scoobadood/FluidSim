@@ -1,34 +1,20 @@
 #include "spdlog/cfg/env.h"
 #include "spdlog/spdlog.h"
 
-#include "main.h"
 #include "gl_common.h"
+#include "gl_error.h"
 #include "shader.h"
 #include "texture.h"
 #include "height_field_sim.h"
 #include "geometry_helper.h"
 
+#include <GLFW/glfw3.h>
 #include "glm/ext/matrix_clip_space.hpp"
 #include "glm/ext/matrix_transform.hpp"
 #include "glm/detail/type_quat.hpp"
 #include "glm/gtc/quaternion.hpp"
-
-
-const int32_t POS_ATTR = 0;
-const int32_t NORM_ATTR = 1;
-const int32_t COLR_ATTR = 2;
-const int32_t TEXT_ATTR = 3;
-
-/* ******************************************************************************************
- *  Error macro
- * ******************************************************************************************/
-GLenum glerr;
-#define CHECK_GL_ERROR(txt)   \
-if ((glerr = glGetError()) != GL_NO_ERROR){ \
-spdlog::critical("GL Error {} : {:x}", txt, glerr); \
-throw std::runtime_error("GLR"); \
-} \
-
+#include "renderer.h"
+#include "mesh.h"
 
 /* ******************************************************************************************
  *
@@ -156,74 +142,6 @@ GLFWwindow *initialise() {
 
 /* ******************************************************************************************
  *
- *  Create the geometry for the scene
- *
- * ******************************************************************************************/
-
-void
-create_geometry_buffers(const GeometryHelper::MetaData &s,//
-                        GLuint &vao,//
-                        GLuint &vbo,//
-                        GLuint &ebo) {
-  spdlog::info("Creating buffers");
-
-  // VAO
-  glGenVertexArrays(1, &vao);
-  glBindVertexArray(vao);
-  glGenBuffers(1, &vbo);
-  glGenBuffers(1, &ebo);
-
-  glBindBuffer(GL_ARRAY_BUFFER, vbo);
-  glBufferData(GL_ARRAY_BUFFER, s.vertex_storage_sz_bytes, nullptr, GL_DYNAMIC_DRAW);
-
-  long offset = 0;
-  glEnableVertexAttribArray(POS_ATTR);
-  glVertexAttribPointer(POS_ATTR, 3, GL_FLOAT, GL_FALSE, s.bytes_per_vertex, (GLvoid *) offset);
-  offset += s.position_data_size;
-
-  if (s.normal_data_size > 0) {
-    glEnableVertexAttribArray(NORM_ATTR);
-    glVertexAttribPointer(NORM_ATTR, 3, GL_FLOAT, GL_FALSE, s.bytes_per_vertex, (GLvoid *) offset);
-    offset += s.normal_data_size;
-  }
-
-  if (s.colour_data_size > 0) {
-    glEnableVertexAttribArray(COLR_ATTR);
-    glVertexAttribPointer(COLR_ATTR, 3, GL_FLOAT, GL_FALSE, s.bytes_per_vertex, (GLvoid *) offset);
-    offset += s.colour_data_size;
-  }
-
-  if (s.texture_coord_size > 0) {
-    glEnableVertexAttribArray(TEXT_ATTR);
-    glVertexAttribPointer(TEXT_ATTR, 2, GL_FLOAT, GL_FALSE, s.bytes_per_vertex, (GLvoid *) offset);
-  }
-
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, s.index_storage_sz_bytes, nullptr, GL_DYNAMIC_DRAW);
-
-  CHECK_GL_ERROR("create geometry")
-}
-
-/**
- * Stash the actual vertex data in the buffers
- */
-void load_geometry(GLuint vao, GLuint vbo, GLuint ebo,//
-                   const std::vector<float> &vertex_data,//
-                   const std::vector<uint32_t> &index_data
-) {
-  glBindVertexArray(vao);
-  glBindBuffer(GL_ARRAY_BUFFER, vbo);
-  glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr) (vertex_data.size() * sizeof(float)), vertex_data.data(), GL_STATIC_DRAW);
-
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr) (index_data.size() * sizeof(uint32_t)), index_data.data(),
-               GL_STATIC_DRAW);
-
-  CHECK_GL_ERROR("load geometry")
-}
-
-/* ******************************************************************************************
- *
  *  Create and bind Shader uniforms
  *
  * ******************************************************************************************/
@@ -275,15 +193,15 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
   glfwSetWindowUserPointer(window, &hf);
 
   // Create initial geometry
-  GLuint vao, vbo, ebo;
   auto sn = gh.ComputeStorageNeeds(hf);
-  create_geometry_buffers(sn, vao, vbo, ebo);
+  Mesh mesh{0,1,-1,3};
 
   // Generate and load the geometry
   std::vector<float> vertex_data;
   std::vector<uint32_t> index_data;
   gh.GenerateGeometry(hf, vertex_data, index_data);
-  load_geometry(vao, vbo, ebo, vertex_data, index_data);
+  mesh.SetVertexData(vertex_data);
+  mesh.SetIndexData(index_data);
 
   // Create a shader
   auto shader = init_shader();
@@ -303,7 +221,7 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // Bind VAO
-    glBindVertexArray(vao);
+    mesh.Bind();
 
     // Update view
     glm::mat4 view{1};
@@ -346,7 +264,8 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
     start = finish;
     hf.Simulate(elapsed.count()/1000.0f);
     gh.GenerateGeometry(hf, vertex_data, index_data);
-    load_geometry(vao, vbo, ebo, vertex_data, index_data);
+
+    mesh.SetVertexData(vertex_data);
 
     //
     // End of frame

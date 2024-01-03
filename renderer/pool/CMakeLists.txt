@@ -7,11 +7,12 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(glfw)
 
 add_executable(test_glfw
-        src/main.cc include/main.h
-        include/scene_data.h
-        src/height_field_sim.cc
-        include/geometry_helper.h
-        src/geometry_helper.cc
+        src/main.cc
+        src/height_field_sim.cc include/scene_data.h
+        src/geometry_helper.cc include/geometry_helper.h
+        src/renderer.cc include/renderer.h
+        src/mesh.cpp include/mesh.h
+        src/gl_error.cc  include/gl_error.h
 )
 
 target_include_directories(test_glfw
