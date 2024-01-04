@@ -5,8 +5,9 @@
 #include "mesh_helper.h"
 #include <vector>
 
-Mesh MeshHelper::Cuboid(float sz_x, float sz_y, float sz_z, float x, float y, float z, float r, float g, float b) {
-  Mesh cube_mesh{0, 1, 2, -1};
+std::shared_ptr<Mesh>
+MeshHelper::Cuboid(float sz_x, float sz_y, float sz_z, float x, float y, float z, float r, float g, float b) {
+  auto cube_mesh = std::make_shared<Mesh>(0, 1, 2, -1);
   std::vector<float> vertex_data;
   std::vector<uint32_t> index_data;
   auto min_x = x - sz_x / 2.0f;
@@ -64,7 +65,7 @@ Mesh MeshHelper::Cuboid(float sz_x, float sz_y, float sz_z, float x, float y, fl
                                          base_idx, base_idx + 2, base_idx + 3});
   }
 
-  cube_mesh.SetIndexData(index_data);
-  cube_mesh.SetVertexData(vertex_data);
+  cube_mesh->SetIndexData(index_data);
+  cube_mesh->SetVertexData(vertex_data);
   return cube_mesh;
 }

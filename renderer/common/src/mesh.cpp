@@ -63,6 +63,7 @@ Mesh::Mesh(int32_t position_attr_idx,
 }
 
 Mesh::~Mesh() {
+  spdlog::warn("Goddam muthafucking mesh deallocated - you just lost all the things");
   glBindVertexArray(0);
   glDeleteBuffers(1, &vbo_);
   glDeleteBuffers(1, &ebo_);
@@ -71,6 +72,8 @@ Mesh::~Mesh() {
 
 void Mesh::Bind() const {
   glBindVertexArray(vao_);
+  CHECK_GL_ERROR("Bind Vertex Array")
+
 }
 
 void Mesh::SetVertexData(const std::vector<float> &vertex_data) const {

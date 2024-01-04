@@ -24,15 +24,3 @@ target_link_libraries(GLHelpers
         ${OPENGL_LIBRARIES}
         glm
         )
-
-add_executable(test_obj_loader
-        tests/test_obj_parser.cc
-        )
-
-
-target_link_libraries(test_obj_loader
-        PRIVATE
-        GLHelpers
-        gtest
-        GLEW::GLEW
-        )

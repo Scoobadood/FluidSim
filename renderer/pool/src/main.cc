@@ -92,7 +92,7 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
 
   // Create initial geometry
   Mesh scene_mesh = load_scene();
-  Mesh cube_mesh = MeshHelper::Cuboid(1,1,1, 0, 15.0f, 0);
+  auto cube_mesh = MeshHelper::Cuboid(1,1,1, 0, 15.0f, 0);
 
   std::shared_ptr<HeightField> hf;
 
@@ -162,8 +162,8 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
     glDrawElements(GL_TRIANGLES, scene_mesh.NumElements(), GL_UNSIGNED_INT, (void *) nullptr);
     CHECK_GL_ERROR("Render Pool")
 
-    cube_mesh.Bind();
-    glDrawElements(GL_TRIANGLES, cube_mesh.NumElements(), GL_UNSIGNED_INT, (void *) nullptr);
+    cube_mesh->Bind();
+    glDrawElements(GL_TRIANGLES, cube_mesh->NumElements(), GL_UNSIGNED_INT, (void *) nullptr);
 
     // Update World
     auto finish = std::chrono::high_resolution_clock::now();
