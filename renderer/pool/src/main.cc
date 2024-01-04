@@ -105,6 +105,12 @@ void key_callback(GLFWwindow *window, int key,//
   } else if (GLFW_KEY_COMMA == key) {
     // Decrease wave speed
     ((HeightField *) glfwGetWindowUserPointer(window))->DecreaseWaveSpeed();
+  } else if (GLFW_KEY_X == key) {
+    // Toggle between reflect and wraparound boundaries
+    ((HeightField *) glfwGetWindowUserPointer(window))->ToggleXBoundary();
+  }else if (GLFW_KEY_Z == key) {
+    // Toggle between reflect and wraparound boundaries
+    ((HeightField *) glfwGetWindowUserPointer(window))->ToggleZBoundary();
   }
 }
 

@@ -21,9 +21,13 @@ public:
   const std::vector<float>& Heights() const;
   void IncreaseWaveSpeed();
   void DecreaseWaveSpeed();
+  void ToggleXBoundary();
+  void ToggleZBoundary();
   void Simulate(float delta_t);
 
 private:
+  bool boundary_reflect_x_;
+  bool boundary_reflect_z_;
   uint32_t wave_speed_level_;
   std::vector<float> wave_propagation_speed_levels_;
   uint32_t num_x_cols_;

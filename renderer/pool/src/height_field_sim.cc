@@ -7,7 +7,9 @@
 const float G = 9.8f;
 
 HeightField::HeightField(uint32_t num_x_cols, uint32_t num_z_cols, float dim_x_m, float dim_z_m, float depth) //
-        : wave_speed_level_{2}//
+        : boundary_reflect_x_{true}//
+        , boundary_reflect_z_{true}//
+        , wave_speed_level_{2}//
         , num_x_cols_{num_x_cols}//
         , num_z_cols_{num_z_cols} //
 
@@ -21,10 +23,10 @@ HeightField::HeightField(uint32_t num_x_cols, uint32_t num_z_cols, float dim_x_m
   // Speed of waves in shallow water approx sqrt(gh) where h is depth
   wave_propagation_speed_levels_.resize(5);
   wave_propagation_speed_levels_[2] = std::sqrtf(G * depth);
-  wave_propagation_speed_levels_[1] = std::sqrtf(G * depth*2);
-  wave_propagation_speed_levels_[0] = std::sqrtf(G * depth*4);
-  wave_propagation_speed_levels_[3] = std::sqrtf(G * depth*0.8f);
-  wave_propagation_speed_levels_[4] = std::sqrtf(G * depth*0.5f);
+  wave_propagation_speed_levels_[1] = std::sqrtf(G * depth * 2);
+  wave_propagation_speed_levels_[0] = std::sqrtf(G * depth * 4);
+  wave_propagation_speed_levels_[3] = std::sqrtf(G * depth * 0.8f);
+  wave_propagation_speed_levels_[4] = std::sqrtf(G * depth * 0.5f);
 }
 
 void HeightField::Init(InitMode mode) {
@@ -83,10 +85,27 @@ void HeightField::Simulate(float delta_t) {
   auto h2 = col_spacing_x_ * col_spacing_z_;
   for (auto z = 0; z < num_z_cols_; ++z) {
     for (auto x = 0; x < num_x_cols_; ++x) {
-      auto left = (x > 0) ? heights_[idx - 1] : heights_[idx];
-      auto right = (x < num_x_cols_ - 1) ? heights_[idx + 1] : heights_[idx];
-      auto up = (z > 0) ? heights_[idx - num_x_cols_] : heights_[idx];
-      auto down = (z < num_z_cols_ - 1) ? heights_[idx + num_x_cols_] : heights_[idx];
+      auto
+      left = (x > 0)
+             ? heights_[idx - 1]
+             : (boundary_reflect_x_
+                ? heights_[idx]
+                : heights_[idx + (num_x_cols_ - 1)]);
+      auto right = (x < num_x_cols_ - 1)
+                   ? heights_[idx + 1]
+                   : (boundary_reflect_x_
+                      ? heights_[idx]
+                      : heights_[idx - (num_x_cols_ - 1)]);
+      auto up = (z > 0)
+                ? heights_[idx - num_x_cols_]
+                : (boundary_reflect_z_
+                   ? heights_[idx]
+                   : heights_[idx + ((num_z_cols_ - 1) * num_x_cols_)]);
+      auto down = (z < num_z_cols_ - 1)
+                  ? heights_[idx + num_x_cols_]
+                  : (boundary_reflect_z_
+                     ? heights_[idx]
+                     : heights_[idx - ((num_z_cols_ - 1) * num_x_cols_)]);
 
       velocities_[idx] += (delta_t * c2 * ((left + right + up + down) - (4 * heights_[idx])) / h2);
       velocities_[idx] *= 0.999f;
@@ -107,3 +126,7 @@ void HeightField::DecreaseWaveSpeed() {
   if (wave_speed_level_ == 0) return;
   --wave_speed_level_;
 }
+
+void HeightField::ToggleXBoundary() { boundary_reflect_x_ = !boundary_reflect_x_; }
+
+void HeightField::ToggleZBoundary() { boundary_reflect_z_ = !boundary_reflect_z_; }
