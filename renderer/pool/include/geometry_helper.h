@@ -33,7 +33,7 @@ public:
     int32_t water_elements;
   };
 
-  void GenerateGeometry(const HeightField &hf, std::vector<float> &vertex_data,
+  void GenerateGeometry(const std::shared_ptr<HeightField> &hf, std::vector<float> &vertex_data,
                         std::vector<uint32_t> &index_data,
                         bool generate_water,
                         bool generate_scene) const;

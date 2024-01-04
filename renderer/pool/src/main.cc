@@ -14,6 +14,7 @@
 #include "window.h"
 #include "arcball.h"
 
+//#define WATER_ENABLED
 
 ArcBall *g_arcball;
 
@@ -35,7 +36,7 @@ std::shared_ptr<Shader> init_shader() {
   return shader;
 }
 
-void setup_input_handlers(Window &window, HeightField &hf) {
+void setup_input_handlers(Window &window, std::shared_ptr<HeightField>& hf) {
   window.SetRightMousePressHandler([](float mouse_x, float mouse_y) {
     g_arcball->DragStarted(mouse_x, mouse_y);
   });
@@ -45,13 +46,16 @@ void setup_input_handlers(Window &window, HeightField &hf) {
   window.SetMouseMoveHandler([](float mouse_x, float mouse_y) {
     g_arcball->Drag(mouse_x, mouse_y);
   });
-  window.RegisterKeyReleaseHandler(GLFW_KEY_R, [&]() { hf.Init(HeightField::PULSE); });
-  window.RegisterKeyReleaseHandler(GLFW_KEY_W, [&]() { hf.Init(HeightField::WAVE); });
-  window.RegisterKeyReleaseHandler(GLFW_KEY_S, [&]() { hf.Init(HeightField::CUBE); });
-  window.RegisterKeyReleaseHandler(GLFW_KEY_PERIOD, [&]() { hf.IncreaseWaveSpeed(); });
-  window.RegisterKeyReleaseHandler(GLFW_KEY_COMMA, [&]() { hf.DecreaseWaveSpeed(); });
-  window.RegisterKeyReleaseHandler(GLFW_KEY_X, [&]() { hf.ToggleXBoundary(); });
-  window.RegisterKeyReleaseHandler(GLFW_KEY_Z, [&]() { hf.ToggleZBoundary(); });
+
+  if( hf) {
+    window.RegisterKeyReleaseHandler(GLFW_KEY_R, [&]() { hf->Init(HeightField::PULSE); });
+    window.RegisterKeyReleaseHandler(GLFW_KEY_W, [&]() { hf->Init(HeightField::WAVE); });
+    window.RegisterKeyReleaseHandler(GLFW_KEY_S, [&]() { hf->Init(HeightField::CUBE); });
+    window.RegisterKeyReleaseHandler(GLFW_KEY_PERIOD, [&]() { hf->IncreaseWaveSpeed(); });
+    window.RegisterKeyReleaseHandler(GLFW_KEY_COMMA, [&]() { hf->DecreaseWaveSpeed(); });
+    window.RegisterKeyReleaseHandler(GLFW_KEY_X, [&]() { hf->ToggleXBoundary(); });
+    window.RegisterKeyReleaseHandler(GLFW_KEY_Z, [&]() { hf->ToggleZBoundary(); });
+  }
 }
 
 Mesh load_scene() {
@@ -64,6 +68,7 @@ Mesh load_scene() {
   scene_mesh.SetIndexData(scene_indices);
   return scene_mesh;
 }
+
 /* ******************************************************************************************
  *
  *  Main
@@ -82,13 +87,16 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
   // Create initial geometry
   Mesh scene_mesh = load_scene();
 
+  std::shared_ptr<HeightField> hf;
+
+  #ifdef WATER_ENABLED
   // Pool dim
   float pool_x = 22.0f;
   float pool_z = 32.0f;
   float pool_depth = 4.0f;
   // Set up Height field
-  HeightField hf(44, 64, pool_x, pool_z, pool_depth);
-  hf.Init(HeightField::PULSE);
+  hf = std::make_shared<HeightField>(44, 64, pool_x, pool_z, pool_depth);
+  hf->Init(HeightField::PULSE);
 
   GeometryHelper gh{pool_x, pool_z, 0.0f, pool_depth, true, false, true};
   std::vector<float> vertex_data;
@@ -98,9 +106,9 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
   Mesh water_mesh{0, 1, -1, 3};
   water_mesh.SetVertexData(vertex_data);
   water_mesh.SetIndexData(index_data);
+  #endif
 
   setup_input_handlers(window, hf);
-
   g_arcball->SetRotation(glm::rotate_slow(glm::mat4(1), (float) M_PI / 9.0f, {1, 0, 0}));
 
   auto start = std::chrono::high_resolution_clock::now();
@@ -115,20 +123,13 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
     glClearColor(0.3, 0.3, 0.3, 1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // Bind VAO
-    water_mesh.Bind();
+    texture->BindToTextureUnit(0);
 
     // Update view
     glm::mat4 view{1};
     view = glm::translate(view, glm::vec3(0, -6.25, -50));
     view = view * g_arcball->Rotation();
-
     glm::mat4 model = glm::mat4(1.0);
-    //  model = glm::translate(model,glm::vec3(0,0,-10));
-//    model = model * g_model_rot;
-
-    texture->BindToTextureUnit(0);
-    CHECK_GL_ERROR("Texture")
 
     shader->use();
     shader->set_uniform("project", project);
@@ -136,6 +137,7 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
     shader->set_uniform("model", model);
     shader->set_uniform("combi_texture", 0);
 
+    #ifdef WATER_ENABLED
     shader->set_uniform("kd", 0.8f);
     shader->set_uniform("ks", 0.9f);
     shader->set_uniform("ka", 0.2f);
@@ -143,6 +145,7 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
     water_mesh.Bind();
     glDrawElements(GL_TRIANGLES, water_mesh.NumElements(), GL_UNSIGNED_INT, (void *) nullptr);
     CHECK_GL_ERROR("Render Water")
+    #endif
 
     shader->set_uniform("kd", 0.8f);
     shader->set_uniform("ks", 0.1f);
@@ -152,22 +155,19 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
     glDrawElements(GL_TRIANGLES, scene_mesh.NumElements(), GL_UNSIGNED_INT, (void *) nullptr);
     CHECK_GL_ERROR("Render Pool")
 
-    //
-    // Update geometry
-    //
+    // Update World
     auto finish = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<float, std::milli> elapsed = finish - start;
+    std::chrono::duration<float> elapsed = finish - start;
     start = finish;
-    hf.Simulate(elapsed.count() / 1000.0f);
+
+    #ifdef WATER_ENABLED
+    hf->Simulate(elapsed.count());
     gh.GenerateGeometry(hf, vertex_data, index_data, true, false);
-
     water_mesh.SetVertexData(vertex_data);
+    #endif
 
-    //
     // End of frame
-    //
     window.SwapBuffers();
-    glfwPollEvents();
   }
   return 0;
 }

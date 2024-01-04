@@ -156,7 +156,8 @@ void GeometryHelper::AddBlock(float min_x, float max_x,
   AddYPlane(min_y, -1, min_x, max_x, min_z, max_z, r, g, b, texture, vertex_data, index_data);
 }
 
-void GeometryHelper::GenerateGeometry(const HeightField &hf, std::vector<float> &vertex_data,
+void GeometryHelper::GenerateGeometry(const std::shared_ptr<HeightField> &hf,
+                                      std::vector<float> &vertex_data,
                                       std::vector<uint32_t> &index_data,
                                       bool generate_water,
                                       bool generate_scene) const {
@@ -164,8 +165,8 @@ void GeometryHelper::GenerateGeometry(const HeightField &hf, std::vector<float> 
   if (!(generate_scene ^ generate_water)) {
     throw std::runtime_error("Only generate one of water and scene");
   }
-  auto column_width = pool_dim_x_ / (float) hf.DimX();
-  auto column_depth = pool_dim_z_ / (float) hf.DimZ();
+  auto column_width = pool_dim_x_ / (float) hf->DimX();
+  auto column_depth = pool_dim_z_ / (float) hf->DimZ();
   const auto min_y = pool_floor_y_;
 
   vertex_data.clear();
@@ -173,12 +174,12 @@ void GeometryHelper::GenerateGeometry(const HeightField &hf, std::vector<float> 
 
   if (generate_water) {
     auto height_idx = 0;
-    auto heights = hf.Heights();
+    auto heights = hf->Heights();
     auto min_z = -(pool_dim_z_ / 2.0f);
-    for (auto z = 0; z < hf.DimZ(); ++z) {
+    for (auto z = 0; z < hf->DimZ(); ++z) {
       auto min_x = -(pool_dim_x_ / 2.0f);
       auto max_z = min_z + column_depth;
-      for (auto x = 0; x < hf.DimX(); ++x) {
+      for (auto x = 0; x < hf->DimX(); ++x) {
         auto max_x = min_x + column_width;
         auto max_y = heights[height_idx];
 

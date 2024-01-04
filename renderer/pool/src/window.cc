@@ -67,6 +67,7 @@ bool Window::ShouldClose() { return glfwWindowShouldClose(window_); }
 
 void Window::SwapBuffers() {
   glfwSwapBuffers(window_);
+  glfwPollEvents();
 }
 
 void Window::GetFrameBufferSize(int32_t &width, int32_t &height) {
