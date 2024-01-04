@@ -5,6 +5,7 @@
 #ifndef FLUIDSIM_MESH_H
 #define FLUIDSIM_MESH_H
 
+#include <vector>
 #include "gl_common.h"
 
 class Mesh {

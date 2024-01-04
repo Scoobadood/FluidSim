@@ -59,7 +59,8 @@ IF (APPLE)
 
 ENDIF (APPLE)
 
+add_subdirectory(common)
 add_subdirectory(gl_helpers)
 add_subdirectory(glfw_utils)
-add_subdirectory(common)
+add_subdirectory(physx)
 add_subdirectory(pool)
