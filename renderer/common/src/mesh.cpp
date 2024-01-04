@@ -76,7 +76,41 @@ void Mesh::Bind() const {
 
 }
 
-void Mesh::SetVertexData(const std::vector<float> &vertex_data) const {
+Mesh::BoundingBox ComputeBoundingBox(const std::vector<float> &vertex_data,
+                                     bool has_normals,
+                                     bool has_colours,
+                                     bool has_texture_coords) {
+  Mesh::BoundingBox b{{
+                              std::numeric_limits<float>::max(),
+                              std::numeric_limits<float>::max(),
+                              std::numeric_limits<float>::max()},
+                      {
+                              std::numeric_limits<float>::lowest(),
+                              std::numeric_limits<float>::lowest(),
+                              std::numeric_limits<float>::lowest()
+                      }
+  };
+  auto base_idx = 0;
+  while (base_idx + 2 < vertex_data.size()) {
+    float x = vertex_data[base_idx];
+    float y = vertex_data[base_idx + 1];
+    float z = vertex_data[base_idx + 2];
+    if (x < b.min_vertex[0])b.min_vertex[0] = x;
+    if (x > b.max_vertex[0])b.max_vertex[0] = x;
+    if (y < b.min_vertex[1])b.min_vertex[1] = y;
+    if (y > b.max_vertex[1])b.max_vertex[1] = y;
+    if (z < b.min_vertex[2])b.min_vertex[0] = z;
+    if (z > b.max_vertex[2])b.max_vertex[0] = z;
+    base_idx += 3;
+    if (has_normals)base_idx += 3;
+    if (has_colours)base_idx += 3;
+    if (has_texture_coords)base_idx += 2;
+  }
+  return b;
+}
+
+void Mesh::SetVertexData(const std::vector<float> &vertex_data)  {
+  bounding_box_ = ComputeBoundingBox(vertex_data, HasNormals(), HasColours(), HasTextureCoords());
   glBindVertexArray(vao_);
   glBindBuffer(GL_ARRAY_BUFFER, vbo_);
 

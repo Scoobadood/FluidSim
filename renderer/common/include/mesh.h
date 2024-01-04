@@ -14,8 +14,12 @@ public:
                 int32_t normal_attr_idx = -1,
                 int32_t colour_attr_idx = -1,
                 int32_t texture_attr_idx = -1);
-
   ~Mesh();
+
+  struct BoundingBox{
+    std::array<float,3> min_vertex;
+    std::array<float,3> max_vertex;
+  };
 
   void Bind() const;
   inline GLsizei NumElements() const {return num_elements_;}
@@ -26,9 +30,11 @@ public:
 
   inline bool HasTextureCoords() const { return texture_attr_idx_ >= 0; }
 
-  void SetVertexData(const std::vector<float> &vertex_data) const;
+  void SetVertexData(const std::vector<float> &vertex_data) ;
 
   void SetIndexData(const std::vector<uint32_t> &indices) ;
+
+  const BoundingBox& Bounds() const { return bounding_box_;};
 
 private:
   int32_t position_attr_idx_;
@@ -39,6 +45,7 @@ private:
   GLuint vbo_;
   GLuint ebo_;
   GLsizei num_elements_;
+  BoundingBox bounding_box_;
 };
 
 
