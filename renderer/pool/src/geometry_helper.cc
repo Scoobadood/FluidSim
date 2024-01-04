@@ -12,14 +12,19 @@ const std::map<std::string, std::pair<std::pair<float, float>, std::pair<float, 
                 {"water",    std::make_pair(std::make_pair(0.6f, 0.6f), std::make_pair(.6f, .601))}
         };
 
-GeometryHelper::GeometryHelper(float column_width, //
-                               float column_height, //
-                               bool with_normals,//
-                               bool with_colours,//
-                               bool with_textures
+GeometryHelper::GeometryHelper(
+        float pool_x_m,
+        float pool_z_m,
+        float pool_floor_y_m,
+        float pool_depth_m,
+        bool with_normals,//
+        bool with_colours,//
+        bool with_textures
 ) //
-        : column_width_{column_width}//
-        , column_depth_{column_height}//
+        : pool_dim_x_{pool_x_m}//
+        , pool_dim_z_{pool_z_m}//
+        , pool_floor_y_{pool_floor_y_m}//
+        , pool_depth_{pool_depth_m}//
         , with_normals_{with_normals}//
         , with_colours_{with_colours}//
         , with_textures_{with_textures}//
@@ -159,9 +164,9 @@ void GeometryHelper::GenerateGeometry(const HeightField &hf, std::vector<float> 
   if (!(generate_scene ^ generate_water)) {
     throw std::runtime_error("Only generate one of water and scene");
   }
-  auto total_width = (float) hf.DimX() * column_width_;
-  auto total_depth = (float) hf.DimZ() * column_depth_;
-  const auto min_y = 0.0f;
+  auto column_width = pool_dim_x_ / (float) hf.DimX();
+  auto column_depth = pool_dim_z_ / (float) hf.DimZ();
+  const auto min_y = pool_floor_y_;
 
   vertex_data.clear();
   index_data.clear();
@@ -169,50 +174,21 @@ void GeometryHelper::GenerateGeometry(const HeightField &hf, std::vector<float> 
   if (generate_water) {
     auto height_idx = 0;
     auto heights = hf.Heights();
-    auto min_z = -(total_depth / 2.0f);
+    auto min_z = -(pool_dim_z_ / 2.0f);
     for (auto z = 0; z < hf.DimZ(); ++z) {
-      auto min_x = -(total_width / 2.0f);
-      auto max_z = min_z + column_depth_;
+      auto min_x = -(pool_dim_x_ / 2.0f);
+      auto max_z = min_z + column_depth;
       for (auto x = 0; x < hf.DimX(); ++x) {
-        auto max_x = min_x + column_width_;
+        auto max_x = min_x + column_width;
         auto max_y = heights[height_idx];
 
         AddBlock(min_x, max_x, min_y, max_y, min_z, max_z, 0.0, 0.3, 0.8, "water", vertex_data, index_data);
 
-        min_x += column_width_;
+        min_x += column_width;
         height_idx++;
       }
-      min_z += column_depth_;
+      min_z += column_depth;
     }
-  }
-
-  if (generate_scene) {
-
-    // Generate the pool surrounds geometry
-    // Left wall
-    AddBlock(-(total_width / 2.0f) - column_width_, -(total_width / 2.0f),
-             0, 2.0f,
-             -(total_depth / 2.0f), (total_depth / 2.0f),
-             6.0, 6.0, 6.0, "concrete", vertex_data, index_data
-    );
-    // Back wall
-    AddBlock(-(total_width / 2.0f) - column_width_, (total_width / 2.0f) + column_width_,
-             0, 2.0f,
-             -(total_depth / 2.0f) - column_depth_, -(total_depth / 2.0f),
-             6.0, 6.0, 6.0, "concrete", vertex_data, index_data
-    );
-    // Right wall
-    AddBlock((total_width / 2.0f), (total_width / 2.0f) + column_width_,
-             0, 2.0f,
-             -(total_depth / 2.0f), (total_depth / 2.0f),
-             6.0, 6.0, 6.0, "concrete", vertex_data, index_data
-    );
-    // Base slab
-    AddBlock(-(total_width / 2.0f) - column_width_, (total_width / 2.0f) + column_width_,
-             -0.2f, 0.0f,
-             -(total_depth / 2.0f) - column_depth_, (total_depth / 2.0f),
-             6.0, 6.0, 6.0, "tiles", vertex_data, index_data
-    );
   }
 }
 

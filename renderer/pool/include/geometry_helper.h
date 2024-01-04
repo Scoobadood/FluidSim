@@ -11,11 +11,14 @@
 
 class GeometryHelper {
 public:
-  GeometryHelper(float column_width, //
-                 float column_height, //
-                 bool with_normals = true,//
-                 bool with_colours = false,//
-                 bool with_textures = false
+  GeometryHelper(
+          float pool_x_m = 5.0f,
+          float pool_z_m = 7.0f,
+          float pool_floor_y_m = 0.0f,
+          float pool_depth = 3.0f,
+          bool with_normals = true,//
+          bool with_colours = false,//
+          bool with_textures = false
   );
 
   struct MetaData {
@@ -71,8 +74,10 @@ protected:
                 std::vector<uint32_t> &index_data) const;
 
 private:
-  float column_width_;
-  float column_depth_;
+  float pool_dim_x_;
+  float pool_dim_z_;
+  float pool_floor_y_;
+  float pool_depth_;
   bool with_normals_;
   bool with_colours_;
   bool with_textures_;

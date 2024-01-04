@@ -89,6 +89,7 @@ void key_callback(GLFWwindow *window, int key,//
                   __attribute__((unused)) int action,//
                   __attribute__((unused)) int mods)//
 {
+  if( action != GLFW_RELEASE) return;
   if (GLFW_KEY_R == key) {
     // Reset the simulation
     ((HeightField *) glfwGetWindowUserPointer(window))->Init(HeightField::PULSE);
@@ -98,6 +99,12 @@ void key_callback(GLFWwindow *window, int key,//
   } else if (GLFW_KEY_S == key) {
     // Reset the simulation
     ((HeightField *) glfwGetWindowUserPointer(window))->Init(HeightField::CUBE);
+  } else if (GLFW_KEY_PERIOD == key) {
+    // Increase wave speed
+    ((HeightField *) glfwGetWindowUserPointer(window))->IncreaseWaveSpeed();
+  } else if (GLFW_KEY_COMMA == key) {
+    // Decrease wave speed
+    ((HeightField *) glfwGetWindowUserPointer(window))->DecreaseWaveSpeed();
   }
 }
 
@@ -186,20 +193,25 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
   auto shader = init_shader();
 
   // Textures
-  auto texture = std::make_shared<Texture>("/Users/dave/Projects/FluidSim/renderer/pool/assets/combo_1024x1024.jpg");
+  auto texture = std::make_shared<Texture>("/Users/dave/Projects/FluidSim/renderer/pool/assets/combi4096.png");
 
+  // Pool dim
+  float pool_x = 22.0f;
+  float pool_z = 32.0f;
+  float pool_depth = 4.0f;
   // Set up Height field
-  HeightField hf(30, 40);
+  HeightField hf(44, 64, pool_x, pool_z, pool_depth);
   hf.Init(HeightField::PULSE);
-  GeometryHelper gh{0.25f, 0.25f, true, false, true};
+  // Parms are pool base height and XZ Y in metres
+  GeometryHelper gh{pool_x, pool_z, 0.0f, pool_depth, true, false, true};
 
   glfwSetWindowUserPointer(window, &hf);
 
   // Create initial geometry
   std::vector<float> scene_verts;
   std::vector<uint32_t> scene_indices;
-  load_model_from_file("/Users/dave/Projects/FluidSim/renderer/pool/assets/pool_scene.ply", false, true, false, scene_verts, scene_indices);
-  Mesh scene_mesh{0,1,-1,-3};
+  load_model_from_file("/Users/dave/Projects/FluidSim/renderer/pool/assets/pool_scene.ply", false, true, true, scene_verts, scene_indices);
+  Mesh scene_mesh{0,1,-1,3};
   scene_mesh.SetVertexData(scene_verts);
   scene_mesh.SetIndexData(scene_indices);
 
@@ -208,6 +220,7 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
   // Generate and load the geometry
   std::vector<float> vertex_data;
   std::vector<uint32_t> index_data;
+
   gh.GenerateGeometry(hf, vertex_data, index_data, true, false);
   water_mesh.SetVertexData(vertex_data);
   water_mesh.SetIndexData(index_data);
@@ -231,7 +244,7 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
 
     // Update view
     glm::mat4 view{1};
-    view = glm::translate(view, glm::vec3(0, -5, -40));
+    view = glm::translate(view, glm::vec3(0, -6.25, -50));
     view = view * g_model_rot;
 
     glm::mat4 model = glm::mat4(1.0);

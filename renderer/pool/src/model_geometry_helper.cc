@@ -23,6 +23,12 @@ void load_model_from_file(const std::string& ply_file_name,
     nz = plyIn.getElement("vertex").getProperty<float>("nz");
   }
 
+  std::vector<float> ss, tt;
+  if( with_texture_coords) {
+    ss = plyIn.getElement("vertex").getProperty<float>("s");
+    tt = plyIn.getElement("vertex").getProperty<float>("t");
+  }
+
   for( auto i=0; i<vPos.size(); i++ ) {
     vertex_data.push_back((float)vPos[i][0]);
     vertex_data.push_back((float)vPos[i][1]);
@@ -31,6 +37,10 @@ void load_model_from_file(const std::string& ply_file_name,
       vertex_data.push_back(nx[i]);
       vertex_data.push_back( ny[i]);
       vertex_data.push_back( nz[i]);
+    }
+    if( with_texture_coords) {
+      vertex_data.push_back(ss[i]);
+      vertex_data.push_back( tt[i]);
     }
   }
 
