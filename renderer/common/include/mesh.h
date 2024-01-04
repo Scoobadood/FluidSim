@@ -14,15 +14,17 @@ public:
                 int32_t normal_attr_idx = -1,
                 int32_t colour_attr_idx = -1,
                 int32_t texture_attr_idx = -1);
+
   ~Mesh();
 
-  struct BoundingBox{
-    std::array<float,3> min_vertex;
-    std::array<float,3> max_vertex;
+  struct BoundingBox {
+    std::array<float, 3> min_vertex;
+    std::array<float, 3> max_vertex;
   };
 
   void Bind() const;
-  inline GLsizei NumElements() const {return num_elements_;}
+
+  inline GLsizei NumElements() const { return num_elements_; }
 
   inline bool HasNormals() const { return normal_attr_idx_ >= 0; }
 
@@ -30,13 +32,17 @@ public:
 
   inline bool HasTextureCoords() const { return texture_attr_idx_ >= 0; }
 
-  void SetVertexData(const std::vector<float> &vertex_data) ;
+  void SetVertexData(const std::vector<float> &vertex_data);
 
-  void SetIndexData(const std::vector<uint32_t> &indices) ;
+  void SetIndexData(const std::vector<uint32_t> &indices);
 
-  const BoundingBox& Bounds() const { return bounding_box_;};
+  const BoundingBox &Bounds() const { return bounding_box_; };
+
+  const std::array<float, 3> &CentreOfMass() const { return centre_of_mass_; };
 
 private:
+  void UpdateDerivedProperties(const std::vector<float> &vertex_data);
+
   int32_t position_attr_idx_;
   int32_t normal_attr_idx_;
   int32_t colour_attr_idx_;
@@ -46,6 +52,7 @@ private:
   GLuint ebo_;
   GLsizei num_elements_;
   BoundingBox bounding_box_;
+  std::array<float, 3> centre_of_mass_;
 };
 
 

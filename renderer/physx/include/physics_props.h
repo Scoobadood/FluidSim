@@ -17,6 +17,7 @@ public:
   void Tick(float delta_t);
 
   void ApplyGravity();
+  void ApplyForce();
 
   const glm::vec3 &Position() const { return position_; }
   void SetPosition(float x, float y, float z);

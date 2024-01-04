@@ -20,6 +20,8 @@ Mesh::Mesh(int32_t position_attr_idx,
         , vbo_{0}//
         , ebo_{0}//
         , num_elements_{0}//
+        , bounding_box_{{0, 0, 0}, {0, 0, 0}}//
+        , centre_of_mass_{0, 0, 0}//
 {
   glGenVertexArrays(1, &vao_);
   glBindVertexArray(vao_);
@@ -76,10 +78,7 @@ void Mesh::Bind() const {
 
 }
 
-Mesh::BoundingBox ComputeBoundingBox(const std::vector<float> &vertex_data,
-                                     bool has_normals,
-                                     bool has_colours,
-                                     bool has_texture_coords) {
+void Mesh::UpdateDerivedProperties(const std::vector<float> &vertex_data) {
   Mesh::BoundingBox b{{
                               std::numeric_limits<float>::max(),
                               std::numeric_limits<float>::max(),
@@ -90,6 +89,8 @@ Mesh::BoundingBox ComputeBoundingBox(const std::vector<float> &vertex_data,
                               std::numeric_limits<float>::lowest()
                       }
   };
+  std::array<float, 3> com{0, 0, 0};
+  float num_vertices = 0;
   auto base_idx = 0;
   while (base_idx + 2 < vertex_data.size()) {
     float x = vertex_data[base_idx];
@@ -101,16 +102,24 @@ Mesh::BoundingBox ComputeBoundingBox(const std::vector<float> &vertex_data,
     if (y > b.max_vertex[1])b.max_vertex[1] = y;
     if (z < b.min_vertex[2])b.min_vertex[0] = z;
     if (z > b.max_vertex[2])b.max_vertex[0] = z;
+    com[0] += x;
+    com[1] += y;
+    com[2] += z;
+    num_vertices += 1.0f;
     base_idx += 3;
-    if (has_normals)base_idx += 3;
-    if (has_colours)base_idx += 3;
-    if (has_texture_coords)base_idx += 2;
+    if (HasNormals())base_idx += 3;
+    if (HasColours())base_idx += 3;
+    if (HasTextureCoords())base_idx += 2;
   }
-  return b;
+  com[0] /= num_vertices;
+  com[1] /= num_vertices;
+  com[2] /= num_vertices;
+  centre_of_mass_ = com;
+  bounding_box_ = b;
 }
 
-void Mesh::SetVertexData(const std::vector<float> &vertex_data)  {
-  bounding_box_ = ComputeBoundingBox(vertex_data, HasNormals(), HasColours(), HasTextureCoords());
+void Mesh::SetVertexData(const std::vector<float> &vertex_data) {
+  UpdateDerivedProperties(vertex_data);
   glBindVertexArray(vao_);
   glBindBuffer(GL_ARRAY_BUFFER, vbo_);
 
