@@ -36,7 +36,7 @@ std::shared_ptr<Shader> init_shader() {
   return shader;
 }
 
-void setup_input_handlers(Window &window, std::shared_ptr<HeightField>& hf) {
+void setup_input_handlers(Window &window, std::shared_ptr<HeightField> &hf) {
   window.SetRightMousePressHandler([](float mouse_x, float mouse_y) {
     g_arcball->DragStarted(mouse_x, mouse_y);
   });
@@ -47,7 +47,7 @@ void setup_input_handlers(Window &window, std::shared_ptr<HeightField>& hf) {
     g_arcball->Drag(mouse_x, mouse_y);
   });
 
-  if( hf) {
+  if (hf) {
     window.RegisterKeyReleaseHandler(GLFW_KEY_R, [&]() { hf->Init(HeightField::PULSE); });
     window.RegisterKeyReleaseHandler(GLFW_KEY_W, [&]() { hf->Init(HeightField::WAVE); });
     window.RegisterKeyReleaseHandler(GLFW_KEY_S, [&]() { hf->Init(HeightField::CUBE); });
@@ -69,6 +69,71 @@ Mesh load_scene() {
   return scene_mesh;
 }
 
+Mesh make_cube(float size, float x, float y, float z) {
+  Mesh cube_mesh{0, 1, 2, -1};
+  std::vector<float> vertex_data;
+  std::vector<uint32_t> index_data;
+  auto min_x = x - size / 2.0f;
+  auto max_x = x + size / 2.0f;
+  auto min_y = y - size / 2.0f;
+  auto max_y = y + size / 2.0f;
+  auto min_z = -size / 2.0f;
+  auto max_z = +size / 2.0f;
+  auto r = 0.0f, g = 0.0f, b = 0.9f;
+
+  // L
+  vertex_data.insert(vertex_data.end(), {
+          min_x, max_y, max_z, -1, 0, 0, r, g, b,
+          min_x, max_y, min_z, -1, 0, 0, r, g, b,
+          min_x, min_y, min_z, -1, 0, 0, r, g, b,
+          min_x, min_y, max_z, -1, 0, 0, r, g, b
+  });
+  // R
+  vertex_data.insert(vertex_data.end(), {
+          max_x, max_y, min_z, 1, 0, 0, r, g, b,
+          max_x, max_y, max_z, 1, 0, 0, r, g, b,
+          max_x, min_y, max_z, 1, 0, 0, r, g, b,
+          max_x, min_y, min_z, 1, 0, 0, r, g, b
+  });
+  // F
+  vertex_data.insert(vertex_data.end(), {
+          min_x, max_y, min_z, 0, 0, -1, r, g, b,
+          max_x, max_y, min_z, 0, 0, -1, r, g, b,
+          max_x, min_y, min_z, 0, 0, -1, r, g, b,
+          min_x, min_y, min_z, 0, 0, -1, r, g, b
+  });
+  // B
+  vertex_data.insert(vertex_data.end(), {
+          max_x, max_y, max_z, 0, 0, 1, r, g, b,
+          min_x, max_y, max_z, 0, 0, 1, r, g, b,
+          min_x, min_y, max_z, 0, 0, 1, r, g, b,
+          max_x, min_y, max_z, 0, 0, 1, r, g, b
+  });
+  // Bt
+  vertex_data.insert(vertex_data.end(), {
+          min_x, min_y, min_z, 0, -1, 0, r, g, b,
+          max_x, min_y, min_z, 0, -1, 0, r, g, b,
+          max_x, min_y, max_z, 0, -1, 0, r, g, b,
+          min_x, min_y, max_z, 0, -1, 0, r, g, b
+  });
+  // T
+  vertex_data.insert(vertex_data.end(), {
+          min_x, max_y, max_z, 0, 1, 0, r, g, b,
+          max_x, max_y, max_z, 0, 1, 0, r, g, b,
+          max_x, max_y, min_z, 0, 1, 0, r, g, b,
+          min_x, max_y, min_z, 0, 1, 0, r, g, b
+  });
+  for (auto face_idx = 0; face_idx < 6; ++face_idx) {
+    uint32_t base_idx = face_idx * 4;
+    index_data.insert(index_data.end(), {base_idx, base_idx + 1, base_idx + 2,
+                                         base_idx, base_idx + 2, base_idx + 3});
+  }
+
+  cube_mesh.SetIndexData(index_data);
+  cube_mesh.SetVertexData(vertex_data);
+  return cube_mesh;
+}
+
 /* ******************************************************************************************
  *
  *  Main
@@ -86,6 +151,7 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
 
   // Create initial geometry
   Mesh scene_mesh = load_scene();
+  Mesh cube_mesh = make_cube(1.0f, 0, 15.0f, 0);
 
   std::shared_ptr<HeightField> hf;
 
@@ -120,7 +186,7 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
     glm::mat4 project = glm::perspective(glm::radians(35.0f), ratio, 0.1f, 100.0f);
 
     glEnable(GL_DEPTH_TEST);
-    glClearColor(0.3, 0.3, 0.3, 1.0);
+    glClearColor(0.2, 0.6, 0.8, 1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     texture->BindToTextureUnit(0);
@@ -154,6 +220,9 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
     scene_mesh.Bind();
     glDrawElements(GL_TRIANGLES, scene_mesh.NumElements(), GL_UNSIGNED_INT, (void *) nullptr);
     CHECK_GL_ERROR("Render Pool")
+
+    cube_mesh.Bind();
+    glDrawElements(GL_TRIANGLES, cube_mesh.NumElements(), GL_UNSIGNED_INT, (void *) nullptr);
 
     // Update World
     auto finish = std::chrono::high_resolution_clock::now();
