@@ -16,6 +16,9 @@ add_executable(test_glfw
         src/model_geometry_helper.cc
         include/happly.h
         include/model_geometry_helper.h
+        include/window.h
+        src/window.cc
+src/arcball.cc
 )
 
 target_include_directories(test_glfw
