@@ -6,9 +6,9 @@ add_library(GLHelpers
         src/shader.cc include/shader.h
         src/texture.cc include/texture.h
         src/render_target.cc include/render_target.h
-        src/mesh.cc include/mesh.h
         src/string_utils.cc include/string_utils.h
         src/gl_enum_map.cc include/gl_enum_map.h
+        src/gl_error.cc include/gl_error.h
         )
 
 target_include_directories(GLHelpers

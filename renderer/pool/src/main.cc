@@ -134,6 +134,10 @@ Mesh make_cube(float size, float x, float y, float z) {
   return cube_mesh;
 }
 
+void DoPhysics(std::vector<Mesh>& meshes) {
+
+}
+
 /* ******************************************************************************************
  *
  *  Main
@@ -229,6 +233,7 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
     std::chrono::duration<float> elapsed = finish - start;
     start = finish;
 
+//    DoPhysics(cube_mesh, scene_mesh);
     #ifdef WATER_ENABLED
     hf->Simulate(elapsed.count());
     gh.GenerateGeometry(hf, vertex_data, index_data, true, false);
