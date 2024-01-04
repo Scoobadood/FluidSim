@@ -6,6 +6,7 @@
 #define FLUIDSIM_MESH_H
 
 #include <vector>
+#include <array>
 #include "gl_common.h"
 
 class Mesh {
@@ -18,8 +19,8 @@ public:
   ~Mesh();
 
   struct BoundingBox {
-    std::array<float, 3> min_vertex;
-    std::array<float, 3> max_vertex;
+    std::array<float, 3> min_vertex{0,0,0};
+    std::array<float, 3> max_vertex{0,0,0};
   };
 
   void Bind() const;
