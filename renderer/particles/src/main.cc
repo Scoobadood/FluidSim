@@ -15,17 +15,37 @@ const uint32_t NUM_PARTICLES = 500;
 
 class Particle {
 public:
-  explicit Particle(const glm::vec3 &position, const glm::vec3 &colour) //
+  explicit Particle(const glm::vec3 &position,
+                    const glm::vec3 &colour,
+                    float mass = 1.0f
+                    ) //
           : position_{position}//
           , colour_{colour} //
-  {}
+  {
+    inv_mass_ = 1.0f / mass;
+  }
+
+  void ApplyForce(const glm::vec3& force) {
+    force_ += force;
+  }
+
+  void Resolve(float delta_t) {
+    auto accel = force_ *inv_mass_;
+    velocity_ += (delta_t * accel);
+    position_ += (delta_t * velocity_);
+    force_ = {0,0,0};
+  }
 
   inline const glm::vec3 &Position() const { return position_; };
+  inline void SetPosition(const glm::vec3& position)  { position_ = position; };
 
   inline const glm::vec3 &Colour() const { return colour_; };
 private:
   glm::vec3 position_;
   glm::vec3 colour_;
+  glm::vec3 velocity_;
+  glm::vec3 force_;
+  float inv_mass_;
 };
 
 std::vector<std::shared_ptr<Particle>> g_world;
@@ -64,7 +84,13 @@ void init_world() {
 }
 
 void update_world(float delta_t) {
-
+  for (auto p : g_world ) {
+    p->ApplyForce({0,-9.8f,0});
+    p->Resolve(delta_t);
+    if( p->Position().y < -150) {
+      p->SetPosition(random_position());
+    }
+  }
 }
 
 void setup_arcball(Window &window) {
@@ -153,13 +179,12 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
 
     // Check elapsed time
     auto now = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<float> elapsed = now - last_time_s;
+    std::chrono::duration<float> delta_time = now - last_time_s;
     last_time_s = now;
-    auto elapsed_s = elapsed.count();
-
+    float dts = delta_time.count();
 
     // Update the physics
-    update_world(elapsed_s);
+    update_world(dts);
 
     // End of frame
     window.SwapBuffers();
