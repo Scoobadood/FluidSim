@@ -87,7 +87,7 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
     auto ratio = (float) width / (float) height;
     glm::mat4 project = glm::perspective(glm::radians(35.0f), ratio, 0.1f, 1000.0f);
     glm::mat4 view{1};
-    view = glm::translate(view, glm::vec3(0, -5, -450));
+    view = glm::translate(view, glm::vec3(0, -5, -50));
     view = view * g_arcball->Rotation();
 
 

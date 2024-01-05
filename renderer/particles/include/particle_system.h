@@ -67,6 +67,7 @@ private:
   std::vector<std::shared_ptr<Particle>> particles_;
   ParticleFactory factory_;
 
+
 };
 
 void particles_calculate_forces(ParticleSystem &ps);

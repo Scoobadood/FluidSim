@@ -50,8 +50,15 @@ const glm::vec3 &Particle::Colour() const { return colour_; }
 glm::vec3 random_position() {
   static unsigned int seed = 123;
   static std::mt19937_64 rng{seed};
-  static std::uniform_real_distribution<float> r{-100, 100};
+  static std::uniform_real_distribution<float> r{0, 10};
   return {r(rng), r(rng), r(rng)};
+}
+glm::vec3 random_up_vel() {
+  static unsigned int seed = 123;
+  static std::mt19937_64 rng{seed};
+  static std::uniform_real_distribution<float> xz{-3, 3};
+  static std::uniform_real_distribution<float> y{20, 30};
+  return {xz(rng), y(rng), xz(rng)};
 }
 
 glm::vec3 random_colour() {
@@ -83,12 +90,11 @@ ParticleSystem::Particles() const {
 
 void ParticleSystem::Constrain() {
   for (auto &p: particles_) {
-    for (auto axis = 0; axis < 3; ++axis) {
-      if (std::fabs(p->Position()[axis]) > 150) {
+      if (p->Position().y<0){
         // Respawn. But with same velocity
-        p->SetPosition(random_position());
+        p->SetPosition({0,0,0});
+        p->SetVelocity(random_up_vel());
         break;
-      }
     }
   }
 }
