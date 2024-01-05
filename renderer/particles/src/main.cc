@@ -9,6 +9,7 @@
 #include "shader.h"
 #include "gl_error.h"
 #include "particle_system.h"
+#include "ode_solver.h"
 
 ArcBall *g_arcball;
 
@@ -114,7 +115,10 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
     float dts = delta_time.count();
 
     // Update the physics
-    ps.Update(dts);
+    euler_solve(ps, dts);
+
+    // Constrain em to stay on screen
+    ps.Constrain();
 
     // End of frame
     window.SwapBuffers();

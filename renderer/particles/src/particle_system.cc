@@ -8,6 +8,8 @@ Particle::Particle(const glm::vec3 &position,
 ) //
         : position_{position}//
         , colour_{colour} //
+        , velocity_{}//
+        , force_{}//
 {
   if (mass <= 0) {
     spdlog::warn("Invalid mass {}, using infinite mass");
@@ -21,6 +23,10 @@ void Particle::ApplyForce(const glm::vec3 &force) {
   force_ += force;
 }
 
+void Particle::ClearForce() {
+  force_ = {0, 0, 0};
+}
+
 void Particle::Resolve(float delta_t) {
   auto accel = force_ * inv_mass_;
   velocity_ += (delta_t * accel);
@@ -28,11 +34,17 @@ void Particle::Resolve(float delta_t) {
   force_ = {0, 0, 0};
 }
 
-const glm::vec3 &Particle::Position() const { return position_; };
+glm::vec3 Particle::Acceleration() const { return force_ * inv_mass_; }
 
-void Particle::SetPosition(const glm::vec3 &position) { position_ = position; };
+const glm::vec3 &Particle::Position() const { return position_; }
 
-const glm::vec3 &Particle::Colour() const { return colour_; };
+const glm::vec3 &Particle::Velocity() const { return velocity_; }
+
+void Particle::SetPosition(const glm::vec3 &position) { position_ = position; }
+
+void Particle::SetVelocity(const glm::vec3 &velocity) { velocity_ = velocity; }
+
+const glm::vec3 &Particle::Colour() const { return colour_; }
 
 
 glm::vec3 random_position() {
@@ -49,7 +61,7 @@ glm::vec3 random_colour() {
   return {col(rng), col(rng), col(rng)};
 }
 
-std::shared_ptr<Particle> ParticleFactory::MakeParticle() const {
+std::shared_ptr<Particle> ParticleFactory::MakeParticle() {
   auto p = random_position();
   auto c = random_colour();
   return std::make_shared<Particle>(p, c);
@@ -69,12 +81,58 @@ ParticleSystem::Particles() const {
   return particles_;
 }
 
-void ParticleSystem::Update(float delta_t) {
-  for (auto p: particles_) {
-    p->ApplyForce({0, -9.8f, 0});
-    p->Resolve(delta_t);
-    if (p->Position().y < -150) {
-      p->SetPosition(random_position());
+void ParticleSystem::Constrain() {
+  for (auto &p: particles_) {
+    for (auto axis = 0; axis < 3; ++axis) {
+      if (std::fabs(p->Position()[axis]) > 150) {
+        // Respawn. But with same velocity
+        p->SetPosition(random_position());
+        break;
+      }
     }
   }
+}
+
+std::vector<float> ParticleSystem::GetState() const {
+  std::vector<float> state;
+  state.reserve(particles_.size() * 6);
+  for (const auto &p: particles_) {
+    state.insert(state.end(), {p->Position().x, p->Position().y, p->Position().z});
+    state.insert(state.end(), {p->Velocity().x, p->Velocity().y, p->Velocity().z});
+  }
+  return state;
+}
+
+void ParticleSystem::SetState(const std::vector<float> &state) {
+  auto idx = 0;
+  for (auto &p: particles_) {
+    p->SetPosition({state[idx], state[idx + 1], state[idx + 2]});
+    p->SetVelocity({state[idx + 3], state[idx + 4], state[idx + 5]});
+    idx += 6;
+  }
+}
+
+void ParticleSystem::ClearForces() {
+  for (auto &p: particles_) p->ClearForce();
+}
+
+void ParticleSystem::ComputeForces() {
+  for (const auto &p: particles_) {
+    p->ApplyForce({0, -9.8f, 0});
+  }
+}
+
+std::vector<float> ParticleSystem::Derivative() {
+  ClearForces();   /* zero the force accumulators */
+  ComputeForces(); /* magic force function */
+  std::vector<float> derivative;
+  derivative.reserve(particles_.size() * 6);
+  for (const auto &p: particles_) {
+    // Derivatibve of X is V
+    derivative.insert(derivative.end(), {p->Velocity().x, p->Velocity().y, p->Velocity().z});
+    // Derivative of V is A (F/m)
+    derivative.insert(derivative.end(), {p->Acceleration().x, p->Acceleration().y, p->Acceleration().z});
+  }
+  return derivative;
+
 }
