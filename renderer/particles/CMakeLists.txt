@@ -1,8 +1,10 @@
 add_executable(party
         src/main.cc
         src/particle_system.cc  include/particle_system.h
-        include/ode_solver.h
-        src/ode_solver.cc
+        src/particle.cc  include/particle.h
+        include/ode_solver.h  src/ode_solver.cc
+        include/force_handlers.h  src/force_handlers.cc
+        src/particle_factory.cc
 )
 
 target_include_directories(party

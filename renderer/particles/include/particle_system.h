@@ -3,47 +3,13 @@
 
 #include <glm/glm.hpp>
 #include <vector>
-
-class Particle {
-public:
-  explicit Particle(const glm::vec3 &position,
-                    const glm::vec3 &colour,
-                    float mass = 1.0f
-  );
-
-  void ApplyForce(const glm::vec3 &force);
-  void ClearForce();
-
-  void Resolve(float delta_t);
-
-  const glm::vec3 &Position() const;
-
-  void SetPosition(const glm::vec3 &position);
-
-  const glm::vec3 &Velocity() const;
-
-  void SetVelocity(const glm::vec3 &velocity);
-
-  glm::vec3 Acceleration() const;
-
-  const glm::vec3 &Colour() const;
-
-private:
-  glm::vec3 position_;
-  glm::vec3 colour_;
-  glm::vec3 velocity_;
-  glm::vec3 force_;
-  float inv_mass_;
-};
-
-class ParticleFactory {
-public:
-  static std::shared_ptr<Particle> MakeParticle();
-};
+#include "force_handlers.h"
+#include "particle.h"
+#include "particle_factory.h"
 
 class ParticleSystem {
 public:
-  ParticleSystem(uint32_t num_particles, ParticleFactory factory);
+  ParticleSystem(uint32_t num_particles, std::shared_ptr<ParticleFactory> &factory);
 
   const std::vector<std::shared_ptr<Particle>> &Particles() const;
 
@@ -56,6 +22,8 @@ public:
 
   inline uint32_t NumParticles() const { return particles_.size(); }
 
+  void AddForceHandler(const std::shared_ptr<ForceHandler> &fh);
+
   void Constrain();
 
 protected:
@@ -65,11 +33,8 @@ protected:
 
 private:
   std::vector<std::shared_ptr<Particle>> particles_;
-  ParticleFactory factory_;
-
-
+  std::shared_ptr<ParticleFactory> factory_;
+  std::vector<std::shared_ptr<ForceHandler>> force_handlers_;
 };
-
-void particles_calculate_forces(ParticleSystem &ps);
 
 #endif //FLUIDSIM_PARTICLE_SYSTEM_H

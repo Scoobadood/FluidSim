@@ -45,7 +45,6 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
   g_arcball = new ArcBall(800, 600);
   setup_arcball(window);
 
-
   glEnable(GL_PROGRAM_POINT_SIZE);
 
   auto shader = init_shader();
@@ -64,8 +63,55 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
   glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 24, (GLvoid *) 12);
   CHECK_GL_ERROR("Alloc buffers")
 
-  ParticleFactory pf;
-  ParticleSystem ps{500, pf};
+  std::shared_ptr<ParticleFactory> pf = std::make_shared<GridParticleFactory>(10, 10, 10, .025);
+  ParticleSystem ps{1000, pf};
+//  ps.AddForceHandler(std::make_shared<GlobalForceHandler>(glm::vec3{0, -9.8f, 0}));
+  // Tie them into a chain
+  const float SPRING_FORCE = 100.0f;
+  const float DAMPING = 50.f;
+  const float REST_LENGTH = 0.015f;
+  for (auto z = 0; z < 10; ++z) {
+    for (auto y = 0; y < 10; ++y) {
+      for (auto x = 0; x < 10; ++x) {
+        auto idx = z * 100 + y * 10 + x;
+        if (x < 9) {
+          ps.AddForceHandler(std::make_shared<SpringForceHandler>(ps.Particles()[idx],
+                                                                  ps.Particles()[idx + 1],
+                                                                  REST_LENGTH,
+                                                                  SPRING_FORCE,
+                                                                  DAMPING
+          ));
+        }
+        if (y < 9) {
+          ps.AddForceHandler(std::make_shared<SpringForceHandler>(ps.Particles()[idx],
+                                                                  ps.Particles()[idx + 10],
+                                                                  REST_LENGTH,
+                                                                  SPRING_FORCE,
+                                                                  DAMPING
+          ));
+        }
+        if (z < 9) {
+          ps.AddForceHandler(std::make_shared<SpringForceHandler>(ps.Particles()[idx],
+                                                                  ps.Particles()[idx + 100],
+                                                                  REST_LENGTH,
+                                                                  SPRING_FORCE,
+                                                                  DAMPING
+          ));
+        }
+//      if (x < 19 && y < 19) {
+//        ps.AddForceHandler(std::make_shared<SpringForceHandler>(ps.Particles()[idx],
+//                                                                ps.Particles()[idx + 20 + 1],
+//                                                                std::sqrtf(1.5f * 1.5f + 1.5f * 1.5f),
+//                                                                100, 1
+//        ));
+//      }
+      }
+    }
+  }
+
+  auto fh = std::make_shared<ClickForceHandler>(ps.Particles().at(0), glm::vec3{-400, -400, -400});
+  ps.AddForceHandler(fh);
+  window.RegisterKeyReleaseHandler(GLFW_KEY_P, [&fh]() { fh->Trigger(); });
 
   CHECK_GL_ERROR("init world")
 
@@ -87,7 +133,7 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
     auto ratio = (float) width / (float) height;
     glm::mat4 project = glm::perspective(glm::radians(35.0f), ratio, 0.1f, 1000.0f);
     glm::mat4 view{1};
-    view = glm::translate(view, glm::vec3(0, -5, -50));
+    view = glm::translate(view, glm::vec3(0, 0, -.6));
     view = view * g_arcball->Rotation();
 
 
@@ -118,7 +164,7 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
     euler_solve(ps, dts);
 
     // Constrain em to stay on screen
-    ps.Constrain();
+//    ps.Constrain();
 
     // End of frame
     window.SwapBuffers();

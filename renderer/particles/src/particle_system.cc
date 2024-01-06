@@ -2,57 +2,6 @@
 #include <spdlog/spdlog.h>
 #include <random>
 
-Particle::Particle(const glm::vec3 &position,
-                   const glm::vec3 &colour,
-                   float mass
-) //
-        : position_{position}//
-        , colour_{colour} //
-        , velocity_{}//
-        , force_{}//
-{
-  if (mass <= 0) {
-    spdlog::warn("Invalid mass {}, using infinite mass");
-    inv_mass_ = 0.0f;
-  } else {
-    inv_mass_ = 1.0f / mass;
-  }
-}
-
-void Particle::ApplyForce(const glm::vec3 &force) {
-  force_ += force;
-}
-
-void Particle::ClearForce() {
-  force_ = {0, 0, 0};
-}
-
-void Particle::Resolve(float delta_t) {
-  auto accel = force_ * inv_mass_;
-  velocity_ += (delta_t * accel);
-  position_ += (delta_t * velocity_);
-  force_ = {0, 0, 0};
-}
-
-glm::vec3 Particle::Acceleration() const { return force_ * inv_mass_; }
-
-const glm::vec3 &Particle::Position() const { return position_; }
-
-const glm::vec3 &Particle::Velocity() const { return velocity_; }
-
-void Particle::SetPosition(const glm::vec3 &position) { position_ = position; }
-
-void Particle::SetVelocity(const glm::vec3 &velocity) { velocity_ = velocity; }
-
-const glm::vec3 &Particle::Colour() const { return colour_; }
-
-
-glm::vec3 random_position() {
-  static unsigned int seed = 123;
-  static std::mt19937_64 rng{seed};
-  static std::uniform_real_distribution<float> r{0, 10};
-  return {r(rng), r(rng), r(rng)};
-}
 glm::vec3 random_up_vel() {
   static unsigned int seed = 123;
   static std::mt19937_64 rng{seed};
@@ -61,24 +10,11 @@ glm::vec3 random_up_vel() {
   return {xz(rng), y(rng), xz(rng)};
 }
 
-glm::vec3 random_colour() {
-  static unsigned int seed = 123;
-  static std::mt19937_64 rng{seed};
-  static std::uniform_real_distribution<float> col{0, 1.0};
-  return {col(rng), col(rng), col(rng)};
-}
-
-std::shared_ptr<Particle> ParticleFactory::MakeParticle() {
-  auto p = random_position();
-  auto c = random_colour();
-  return std::make_shared<Particle>(p, c);
-}
-
-ParticleSystem::ParticleSystem(uint32_t num_particles, ParticleFactory factory)
+ParticleSystem::ParticleSystem(uint32_t num_particles, std::shared_ptr<ParticleFactory> &factory)//
         : factory_(factory)//
 {
   for (auto i = 0; i < num_particles; ++i) {
-    particles_.push_back(factory_.MakeParticle());
+    particles_.push_back(factory_->MakeParticle());
   }
 }
 
@@ -88,13 +24,18 @@ ParticleSystem::Particles() const {
   return particles_;
 }
 
+void ParticleSystem::AddForceHandler(const std::shared_ptr<ForceHandler> &fh) {
+  force_handlers_.push_back(fh);
+}
+
+
 void ParticleSystem::Constrain() {
   for (auto &p: particles_) {
-      if (p->Position().y<0){
-        // Respawn. But with same velocity
-        p->SetPosition({0,0,0});
-        p->SetVelocity(random_up_vel());
-        break;
+    if (p->Position().y < 0) {
+      // Respawn. But with same velocity
+      p->SetPosition({0, 0, 0});
+      p->SetVelocity(random_up_vel());
+      break;
     }
   }
 }
@@ -123,8 +64,8 @@ void ParticleSystem::ClearForces() {
 }
 
 void ParticleSystem::ComputeForces() {
-  for (const auto &p: particles_) {
-    p->ApplyForce({0, -9.8f, 0});
+  for (auto &fh: force_handlers_) {
+    fh->Apply(*this);
   }
 }
 
@@ -138,6 +79,11 @@ std::vector<float> ParticleSystem::Derivative() {
     derivative.insert(derivative.end(), {p->Velocity().x, p->Velocity().y, p->Velocity().z});
     // Derivative of V is A (F/m)
     derivative.insert(derivative.end(), {p->Acceleration().x, p->Acceleration().y, p->Acceleration().z});
+  }
+  for( auto & d : derivative) {
+    if( isnan(d)) {
+      spdlog::critical("NaN");
+    }
   }
   return derivative;
 
