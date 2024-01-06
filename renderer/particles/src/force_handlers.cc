@@ -31,13 +31,14 @@ SpringForceHandler::SpringForceHandler(const std::shared_ptr<Particle> &p1,
  * V = V_a - V_b
  */
 void SpringForceHandler::Apply(ParticleSystem &particle_system) {
-  auto l = p1_->Position() - p2_->Position();
-  auto len_l = glm::length(l);
-  auto ln = l / len_l;
-  auto v = p1_->Velocity() - p2_->Velocity();
-  auto t1 = spring_constant_ * (len_l - rest_length_);
-  auto t2 = damping_constant_ * glm::dot(v, l) / len_l;
-  auto fa = -(t1 + t2) * ln;
+
+  auto diff_pos = p1_->Position() - p2_->Position();
+  auto diff_vel = p1_->Velocity() - p2_->Velocity();
+
+  auto spring_force_magnitude = spring_constant_ * (glm::length(diff_pos) - rest_length_);
+  auto damping_force_magnitude = damping_constant_ * (glm::dot(diff_pos, diff_vel) / glm::length(diff_pos));
+  auto unit_dir = glm::normalize(diff_pos);
+  auto fa = -(spring_force_magnitude+damping_force_magnitude) * unit_dir;
   auto fb = -fa;
   p1_->ApplyForce(fa);
   p2_->ApplyForce(fb);
