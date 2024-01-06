@@ -18,6 +18,18 @@ public:
   virtual void Apply(ParticleSystem &particle_system) = 0;
 };
 
+class ViscousDragHandler : public ForceHandler {
+public:
+  explicit ViscousDragHandler(float drag_coefficient);
+
+  ~ViscousDragHandler() override = default;
+
+  void Apply(ParticleSystem &particle_system) override;
+
+private :
+  float drag_coefficient_;
+};
+
 class GlobalForceHandler : public ForceHandler {
 public:
   explicit GlobalForceHandler(const glm::vec3 &force);

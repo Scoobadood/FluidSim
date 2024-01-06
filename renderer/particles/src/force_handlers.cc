@@ -38,7 +38,7 @@ void SpringForceHandler::Apply(ParticleSystem &particle_system) {
   auto spring_force_magnitude = spring_constant_ * (glm::length(diff_pos) - rest_length_);
   auto damping_force_magnitude = damping_constant_ * (glm::dot(diff_pos, diff_vel) / glm::length(diff_pos));
   auto unit_dir = glm::normalize(diff_pos);
-  auto fa = -(spring_force_magnitude+damping_force_magnitude) * unit_dir;
+  auto fa = -(spring_force_magnitude + damping_force_magnitude) * unit_dir;
   auto fb = -fa;
   p1_->ApplyForce(fa);
   p2_->ApplyForce(fb);
@@ -66,4 +66,14 @@ void ClickForceHandler::Apply(ParticleSystem &particle_system) {
     return;
   }
   if (time_out_ > 0) time_out_--;
+}
+
+ViscousDragHandler::ViscousDragHandler(float drag_coefficient)//
+        : drag_coefficient_{drag_coefficient}//
+{}
+
+void ViscousDragHandler::Apply(ParticleSystem &particle_system) {
+  for (auto &p: particle_system.Particles()) {
+    p->ApplyForce(p->Velocity() * -drag_coefficient_);
+  }
 }

@@ -63,18 +63,18 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
   glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 24, (GLvoid *) 12);
   CHECK_GL_ERROR("Alloc buffers")
 
-  std::shared_ptr<ParticleFactory> pf = std::make_shared<GridParticleFactory>(10, 10, 10, .025);
-  ParticleSystem ps{1000, pf};
+  std::shared_ptr<ParticleFactory> pf = std::make_shared<GridParticleFactory>(5, 5, 5, .025);
+  ParticleSystem ps{125, pf};
 //  ps.AddForceHandler(std::make_shared<GlobalForceHandler>(glm::vec3{0, -9.8f, 0}));
   // Tie them into a chain
   const float SPRING_FORCE = 100.0f;
   const float DAMPING = 50.f;
   const float REST_LENGTH = 0.015f;
-  for (auto z = 0; z < 10; ++z) {
-    for (auto y = 0; y < 10; ++y) {
-      for (auto x = 0; x < 10; ++x) {
-        auto idx = z * 100 + y * 10 + x;
-        if (x < 9) {
+  for (auto z = 0; z < 5; ++z) {
+    for (auto y = 0; y < 5; ++y) {
+      for (auto x = 0; x < 5; ++x) {
+        auto idx = z * 25 + y * 5 + x;
+        if (x < 4) {
           ps.AddForceHandler(std::make_shared<SpringForceHandler>(ps.Particles()[idx],
                                                                   ps.Particles()[idx + 1],
                                                                   REST_LENGTH,
@@ -82,17 +82,17 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
                                                                   DAMPING
           ));
         }
-        if (y < 9) {
+        if (y < 4) {
           ps.AddForceHandler(std::make_shared<SpringForceHandler>(ps.Particles()[idx],
-                                                                  ps.Particles()[idx + 10],
+                                                                  ps.Particles()[idx + 5],
                                                                   REST_LENGTH,
                                                                   SPRING_FORCE,
                                                                   DAMPING
           ));
         }
-        if (z < 9) {
+        if (z < 4) {
           ps.AddForceHandler(std::make_shared<SpringForceHandler>(ps.Particles()[idx],
-                                                                  ps.Particles()[idx + 100],
+                                                                  ps.Particles()[idx + 25],
                                                                   REST_LENGTH,
                                                                   SPRING_FORCE,
                                                                   DAMPING
@@ -109,7 +109,10 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
     }
   }
 
-  auto fh = std::make_shared<ClickForceHandler>(ps.Particles().at(0), glm::vec3{-400, -400, -400});
+//  auto vdh =std::make_shared<ViscousDragHandler>(1.f);
+//  ps.AddForceHandler(vdh);
+
+  auto fh = std::make_shared<ClickForceHandler>(ps.Particles().at(13), glm::vec3{-0, -10, 0});
   ps.AddForceHandler(fh);
   window.RegisterKeyReleaseHandler(GLFW_KEY_P, [&fh]() { fh->Trigger(); });
 
