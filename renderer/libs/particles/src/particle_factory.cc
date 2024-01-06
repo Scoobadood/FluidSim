@@ -2,7 +2,6 @@
 #include "particle.h"
 
 #include <random>
-#include <glm/glm.hpp>
 
 glm::vec3 random_position() {
   static unsigned int seed = 123;

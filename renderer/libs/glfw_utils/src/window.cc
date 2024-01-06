@@ -1,4 +1,4 @@
-#include "../include/window.h"
+#include "window.h"
 #include "spdlog/spdlog.h"
 #include "gl_common.h"
 
