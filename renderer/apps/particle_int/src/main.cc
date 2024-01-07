@@ -68,21 +68,21 @@ glm::vec3 mouse_to_ray(uint32_t width,
                        glm::mat4 &view,
                        uint32_t xpos,
                        uint32_t ypos) {
-  glm::vec2 ndc{2.0f * (((float) xpos / (float) width) - 0.5f),
-                2.0f * (((float) ypos / (float) height) - 0.5f)};
-  glm::vec4 ray_start_ndc{ndc.x, ndc.y, -1.0f, 1.0f};
-  glm::vec4 ray_end_ndc{ndc.x, ndc.y, 1.0f, 1.0f};
+  auto ndc_x = (2.0f * ((float) xpos / (float) width)) - 1.0f;
+  auto ndc_y= 1.0f-(2.0f *((float) ypos / (float) height));
+  glm::vec4 ray_start_ndc{ndc_x, ndc_y, -1.0f, 1.0f};
+  glm::vec4 ray_end_ndc{ndc_x, ndc_y, 1.0f, 1.0f};
 
   auto inv_proj = glm::inverse(proj);
   auto ray_start_view = inv_proj * ray_start_ndc;
-  ray_start_view /= ray_start_view.w;
   auto ray_end_view = inv_proj * ray_end_ndc;
+  ray_start_view /= ray_start_view.w;
   ray_end_view /= ray_end_view.w;
 
   auto inv_view = glm::inverse(view);
   auto ray_start_world = inv_view * ray_start_view;
-  ray_start_world /= ray_start_world.w;
   auto ray_end_world = inv_view * ray_end_view;
+  ray_start_world /= ray_start_world.w;
   ray_end_world /= ray_end_world.w;
   glm::vec3 ray_dir = (ray_end_world - ray_start_world);
   return glm::normalize(ray_dir);
@@ -94,7 +94,7 @@ float point_to_line_dist(const glm::vec3 &P, const glm::vec3 &A, const glm::vec3
   vec3 AB = B - A;
   vec3 AP = P - A;
 
-  vec3 cp = glm::cross(AB, AP);
+  vec3 cp = glm::cross(AP, AB);
   // Magnitude of the pll gram
   float area = glm::length(cp);
   // This is also perp dist * base (|AB|)
@@ -109,10 +109,7 @@ int32_t index_of_closest_point(const glm::vec3 &ray, const glm::vec3 &cam_pos,
   auto index = -1;
   float min_dist = 10.0f;
   for (auto i = 0; i < num_points; i++) {
-    auto dist = point_to_line_dist(
-        {points[i * 3], points[i * 3 + 1], points[i * 3 + 2]},
-        cam_pos,
-        cam_pos + (ray * 10.0f));
+    auto dist = point_to_line_dist({points[i * 3], points[i * 3 + 1], points[i * 3 + 2]},cam_pos,cam_pos + (ray * 10.0f));
     if (dist < min_dist) {
       min_dist = dist;
       index = i;
@@ -173,25 +170,24 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
   ps.AddForceHandler(std::make_shared<SpringForceHandler>(particles[2], particles[4], RLD, SFD, DP));
   ps.AddForceHandler(std::make_shared<SpringForceHandler>(particles[3], particles[4], RLD, SFD, DP));
 
-
 //  auto vdh =std::make_shared<ViscousDragHandler>(1.f);
 //  ps.AddForceHandler(vdh);
 
   CHECK_GL_ERROR("init world")
 
   glm::mat4 project{1};
-  glm::vec3 cam_pos{0, 0, -6};
+  glm::vec3 cam_pos{0, 0, 6};
   glm::mat4 view{1};
 
-  window.SetLeftMousePressHandler([&project, &view, &cam_pos, &ps](float mouse_x, float mouse_y) {
+  int32_t selected_idx = -1;
+  window.SetLeftMousePressHandler([&project, &view, &cam_pos, &ps, &selected_idx](float mouse_x, float mouse_y) {
     auto ray = mouse_to_ray(800, 600, project, view, (uint32_t) std::roundf(mouse_x), (uint32_t) std::roundf(mouse_y));
 
-    auto idx = index_of_closest_point(ray, cam_pos, ps.Positions());
-    spdlog::info("Closest point index {}", idx);
+    selected_idx = index_of_closest_point(ray, cam_pos, ps.Positions());
+    spdlog::info("Closest point index {}", selected_idx);
   });
 
   glm::mat4 r(1);
-  r = glm::rotate_slow(r, (float) M_PI / 2.0f, glm::vec3{0, 0, 1});
   g_arcball->SetRotation(r);
   auto last_time_s = std::chrono::high_resolution_clock::now();
 
@@ -208,7 +204,7 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
     auto ratio = (float) width / (float) height;
     project = glm::perspective(glm::radians(35.0f), ratio, 0.1f, 1000.0f);
     view = glm::mat4{1};
-    view = glm::translate(view, cam_pos);
+    view = glm::translate(view, -cam_pos);
     view = view * g_arcball->Rotation();
 
     shader->use();
@@ -216,7 +212,7 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
     shader->set_uniform("view", view);
     shader->set_uniform("model", glm::mat4(1));
 
-// Draw particles
+    // Draw particles
     std::vector<float> particle_data;
     for (const auto &p : ps.Particles()) {
       particle_data.insert(particle_data.end(), {p->Position().x, p->Position().y, p->Position().z});
@@ -235,6 +231,40 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
     glDrawArrays(GL_POINTS, 0, ps.NumParticles());
     glDrawElements(GL_LINES, 16 * 2, GL_UNSIGNED_INT, nullptr);
     CHECK_GL_ERROR("Draw")
+
+    // Draw a surroundy box if needed
+    if (selected_idx >= 0) {
+      float box_data[4 * 6];
+      auto px = particle_data.at(selected_idx * 6);
+      auto py = particle_data.at(selected_idx * 6 + 1);
+      auto pz = particle_data.at(selected_idx * 6 + 2);
+      auto r = particle_data.at(selected_idx * 6 + 3);
+      auto g = particle_data.at(selected_idx * 6 + 4);
+      auto b = particle_data.at(selected_idx * 6 + 5);
+      // Colour all verts
+      for (auto v = 0; v < 4; v++) {
+        box_data[v * 6 + 3 + 0] = r;
+        box_data[v * 6 + 3 + 1] = g;
+        box_data[v * 6 + 3 + 2] = b;
+        box_data[v * 6 + 0 + 2] = pz;
+      }
+
+      box_data[0 * 6 + 0 + 0] = px - 0.1f;
+      box_data[1 * 6 + 0 + 0] = px + 0.1f;
+      box_data[2 * 6 + 0 + 0] = px + 0.1f;
+      box_data[3 * 6 + 0 + 0] = px - 0.1f;
+
+      box_data[0 * 6 + 0 + 1] = py - 0.1f;
+      box_data[1 * 6 + 0 + 1] = py - 0.1f;
+      box_data[2 * 6 + 0 + 1] = py + 0.1f;
+      box_data[3 * 6 + 0 + 1] = py + 0.1f;
+
+      glBufferData(GL_ARRAY_BUFFER,
+                   (GLsizeiptr) (24 * sizeof(float)), // four points plus colours
+                   box_data,
+                   GL_DYNAMIC_DRAW);
+      glDrawElements(GL_LINES, 4 * 2, GL_UNSIGNED_INT, nullptr);
+    }
 
     // Check elapsed time
     auto now = std::chrono::high_resolution_clock::now();
