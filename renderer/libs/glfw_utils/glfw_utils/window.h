@@ -24,19 +24,23 @@ public:
   void SetLeftMousePressHandler(const std::function<void(float, float)> &hdlr);
   void SetRightMousePressHandler(const std::function<void(float, float)> &hdlr);
 
+  void SetLeftMouseReleaseHandler(const std::function<void(float, float)> &hdlr);
   void SetRightMouseReleaseHandler(const std::function<void(float, float)> &hdlr);
 
   void RegisterKeyReleaseHandler(int32_t key, const std::function<void()>&);
   void RegisterKeyPressHandler(int32_t key, const std::function<void()>&);
 
-  void SetMouseMoveHandler(const std::function<void(float, float)> &hdlr);
+  void SetRightMouseDragHandler(const std::function<void(float, float)> &hdlr);
+  void SetLeftMouseDragHandler(const std::function<void(float, float)> &hdlr);
 
 private:
   GLFWwindow *window_;
   std::function<void(float, float)> right_mouse_press_handler_;
   std::function<void(float, float)> right_mouse_release_handler_;
+  std::function<void(float, float)> right_mouse_drag_handler_;
   std::function<void(float, float)> left_mouse_press_handler_;
   std::function<void(float, float)> left_mouse_release_handler_;
+  std::function<void(float, float)> left_mouse_drag_handler_;
   std::function<void(float, float)> mouse_move_handler_;
   std::map<int32_t, std::function<void()>> key_release_handlers_;
   std::map<int32_t, std::function<void()>> key_press_handlers_;

@@ -9,7 +9,6 @@ void mouse_move_callback(GLFWwindow *window, double xpos, double ypos);
 
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods);
 
-
 Window::Window(uint32_t width, uint32_t height, const std::string &title) {
 /* ******************************************************************************************
  *  Initialise OpenGL, GLEW and GLFW
@@ -95,9 +94,16 @@ void mouse_button_callback(GLFWwindow *window, int button, int action, int mods)
 }
 
 void mouse_move_callback(GLFWwindow *window, double xpos, double ypos) {
+  // Get the mouse buttons
   auto w = (Window *) glfwGetWindowUserPointer(window);
-  if (w->mouse_move_handler_) {
-    w->mouse_move_handler_((float) xpos, (float) ypos);
+  if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
+    if (w->left_mouse_drag_handler_) {
+      w->left_mouse_drag_handler_((float) xpos, (float) ypos);
+    }
+  } else if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
+    if (w->right_mouse_drag_handler_) {
+      w->right_mouse_drag_handler_((float) xpos, (float) ypos);
+    }
   }
 }
 
@@ -129,7 +135,13 @@ void Window::SetRightMousePressHandler(const std::function<void(float, float)> &
 void Window::SetRightMouseReleaseHandler(const std::function<void(float, float)> &hdlr) {
   right_mouse_release_handler_ = hdlr;
 }
+void Window::SetLeftMouseReleaseHandler(const std::function<void(float, float)> &hdlr) {
+  left_mouse_release_handler_ = hdlr;
+}
 
-void Window::SetMouseMoveHandler(const std::function<void(float, float)> &hdlr) {
-  mouse_move_handler_ = hdlr;
+void Window::SetLeftMouseDragHandler(const std::function<void(float, float)> &hdlr) {
+  left_mouse_drag_handler_ = hdlr;
+}
+void Window::SetRightMouseDragHandler(const std::function<void(float, float)> &hdlr) {
+  right_mouse_drag_handler_ = hdlr;
 }

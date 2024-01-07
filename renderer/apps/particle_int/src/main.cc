@@ -17,7 +17,7 @@ void setup_arcball(Window &window) {
   window.SetRightMouseReleaseHandler([](float mouse_x, float mouse_y) {
     g_arcball->DragEnded();
   });
-  window.SetMouseMoveHandler([](float mouse_x, float mouse_y) {
+  window.SetRightMouseDragHandler([](float mouse_x, float mouse_y) {
     g_arcball->Drag(mouse_x, mouse_y);
   });
 }
@@ -67,9 +67,11 @@ glm::vec3 mouse_to_ray(uint32_t width,
                        glm::mat4 &proj,
                        glm::mat4 &view,
                        uint32_t xpos,
-                       uint32_t ypos) {
+                       uint32_t ypos,
+                       glm::vec3 &near,
+                       glm::vec3 &far) {
   auto ndc_x = (2.0f * ((float) xpos / (float) width)) - 1.0f;
-  auto ndc_y= 1.0f-(2.0f *((float) ypos / (float) height));
+  auto ndc_y = 1.0f - (2.0f * ((float) ypos / (float) height));
   glm::vec4 ray_start_ndc{ndc_x, ndc_y, -1.0f, 1.0f};
   glm::vec4 ray_end_ndc{ndc_x, ndc_y, 1.0f, 1.0f};
 
@@ -85,6 +87,8 @@ glm::vec3 mouse_to_ray(uint32_t width,
   ray_start_world /= ray_start_world.w;
   ray_end_world /= ray_end_world.w;
   glm::vec3 ray_dir = (ray_end_world - ray_start_world);
+  near = ray_start_world;
+  far = ray_end_world;
   return glm::normalize(ray_dir);
 }
 
@@ -103,13 +107,25 @@ float point_to_line_dist(const glm::vec3 &P, const glm::vec3 &A, const glm::vec3
   return perp_dist;
 }
 
-int32_t index_of_closest_point(const glm::vec3 &ray, const glm::vec3 &cam_pos,
-                               const std::vector<float> &points) {
+glm::vec3 closest_point_on_ray(const glm::vec3 &P, const glm::vec3 &A, const glm::vec3 &B) {
+  using namespace glm;
+  // L1 to point
+  vec3 AB = B - A;
+  vec3 AP = P - A;
+
+  auto dp1 = glm::dot(AP, AB);
+  auto dp2 = glm::dot(AB, AB);
+
+  return A + ((dp1 / dp2) * AB);
+}
+
+int32_t index_of_closest_point(const glm::vec3 &near, const glm::vec3 &far, const std::vector<float> &points) {
   auto num_points = points.size() / 3;
   auto index = -1;
   float min_dist = 10.0f;
   for (auto i = 0; i < num_points; i++) {
-    auto dist = point_to_line_dist({points[i * 3], points[i * 3 + 1], points[i * 3 + 2]},cam_pos,cam_pos + (ray * 10.0f));
+    auto dist =
+        point_to_line_dist({points[i * 3], points[i * 3 + 1], points[i * 3 + 2]}, near, far);
     if (dist < min_dist) {
       min_dist = dist;
       index = i;
@@ -117,6 +133,18 @@ int32_t index_of_closest_point(const glm::vec3 &ray, const glm::vec3 &cam_pos,
   }
   return index;
 }
+
+/* ******************************************************************************************
+ *
+ *  Global draggy things that are to be fixed later
+ *
+ * ******************************************************************************************/
+bool g_is_dragging = false;
+int32_t g_drag_idx = -1;
+float g_drag_sprint_length;
+std::shared_ptr<SpringForceHandler> g_drag_spring;
+glm::vec3 g_drag_point;
+std::shared_ptr<Particle> g_drag_particle;
 
 /* ******************************************************************************************
  *
@@ -179,12 +207,52 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
   glm::vec3 cam_pos{0, 0, 6};
   glm::mat4 view{1};
 
-  int32_t selected_idx = -1;
-  window.SetLeftMousePressHandler([&project, &view, &cam_pos, &ps, &selected_idx](float mouse_x, float mouse_y) {
-    auto ray = mouse_to_ray(800, 600, project, view, (uint32_t) std::roundf(mouse_x), (uint32_t) std::roundf(mouse_y));
+  window.SetLeftMousePressHandler([&project, &view, &ps](float mouse_x, float mouse_y) {
+    glm::vec3 near, far;
+    auto ray = mouse_to_ray(800,
+                            600,
+                            project,
+                            view,
+                            (uint32_t) std::roundf(mouse_x),
+                            (uint32_t) std::roundf(mouse_y),
+                            near,
+                            far);
+    g_drag_idx = index_of_closest_point(near, far, ps.Positions());
+    spdlog::info("Closest point index {}", g_drag_idx);
+    if (g_drag_idx >= 0) {
+      g_is_dragging = true;
+      g_drag_point = closest_point_on_ray(ps.Particles()[g_drag_idx]->Position(), near, far);
+      g_drag_particle = std::make_shared<Particle>(g_drag_point, glm::vec3{1, 1, 1}, -1.0f);
+      g_drag_spring = std::make_shared<SpringForceHandler>(ps.Particles()[g_drag_idx],
+                                                           g_drag_particle,
+                                                           g_drag_sprint_length,
+                                                           10,
+                                                           1);
+      ps.AddForceHandler(g_drag_spring);
+    }
+  });
 
-    selected_idx = index_of_closest_point(ray, cam_pos, ps.Positions());
-    spdlog::info("Closest point index {}", selected_idx);
+  window.SetLeftMouseDragHandler([&project, &view, &ps](float mouse_x, float mouse_y) {
+    if (!g_is_dragging) return;
+    glm::vec3 near, far;
+    auto ray = mouse_to_ray(800,
+                            600,
+                            project,
+                            view,
+                            (uint32_t) std::roundf(mouse_x),
+                            (uint32_t) std::roundf(mouse_y),
+                            near,
+                            far);
+    g_drag_point = closest_point_on_ray(ps.Particles()[g_drag_idx]->Position(), near, far);
+    g_drag_particle->SetPosition(g_drag_point);
+  });
+
+  window.SetLeftMouseReleaseHandler([&ps](float mouse_x, float mouse_y) {
+    if (!g_is_dragging) return;
+    g_drag_idx = -1;
+    g_is_dragging = false;
+    g_drag_point = glm::vec3{0};
+    ps.RemoveForceHandler(g_drag_spring);
   });
 
   glm::mat4 r(1);
@@ -233,37 +301,36 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
     CHECK_GL_ERROR("Draw")
 
     // Draw a surroundy box if needed
-    if (selected_idx >= 0) {
+    if (g_drag_idx >= 0) {
       float box_data[4 * 6];
-      auto px = particle_data.at(selected_idx * 6);
-      auto py = particle_data.at(selected_idx * 6 + 1);
-      auto pz = particle_data.at(selected_idx * 6 + 2);
-      auto r = particle_data.at(selected_idx * 6 + 3);
-      auto g = particle_data.at(selected_idx * 6 + 4);
-      auto b = particle_data.at(selected_idx * 6 + 5);
+      auto px = particle_data.at(g_drag_idx * 6);
+      auto py = particle_data.at(g_drag_idx * 6 + 1);
+      auto pz = particle_data.at(g_drag_idx * 6 + 2);
+      auto pr = particle_data.at(g_drag_idx * 6 + 3);
+      auto pg = particle_data.at(g_drag_idx * 6 + 4);
+      auto pb = particle_data.at(g_drag_idx * 6 + 5);
       // Colour all verts
       for (auto v = 0; v < 4; v++) {
-        box_data[v * 6 + 3 + 0] = r;
-        box_data[v * 6 + 3 + 1] = g;
-        box_data[v * 6 + 3 + 2] = b;
         box_data[v * 6 + 0 + 2] = pz;
+        box_data[v * 6 + 3 + 0] = pr;
+        box_data[v * 6 + 3 + 1] = pg;
+        box_data[v * 6 + 3 + 2] = pb;
       }
-
       box_data[0 * 6 + 0 + 0] = px - 0.1f;
-      box_data[1 * 6 + 0 + 0] = px + 0.1f;
-      box_data[2 * 6 + 0 + 0] = px + 0.1f;
-      box_data[3 * 6 + 0 + 0] = px - 0.1f;
-
       box_data[0 * 6 + 0 + 1] = py - 0.1f;
+
+      box_data[1 * 6 + 0 + 0] = px + 0.1f;
       box_data[1 * 6 + 0 + 1] = py - 0.1f;
+
+      box_data[2 * 6 + 0 + 0] = px + 0.1f;
       box_data[2 * 6 + 0 + 1] = py + 0.1f;
+
+      box_data[3 * 6 + 0 + 0] = px - 0.1f;
       box_data[3 * 6 + 0 + 1] = py + 0.1f;
 
       glBufferData(GL_ARRAY_BUFFER,
-                   (GLsizeiptr) (24 * sizeof(float)), // four points plus colours
-                   box_data,
-                   GL_DYNAMIC_DRAW);
-      glDrawElements(GL_LINES, 4 * 2, GL_UNSIGNED_INT, nullptr);
+                   (GLsizeiptr) (24 * sizeof(float)), box_data, GL_DYNAMIC_DRAW);
+      glDrawElements(GL_LINES, 8, GL_UNSIGNED_INT, nullptr);
     }
 
     // Check elapsed time

@@ -24,6 +24,7 @@ public:
   inline uint32_t NumParticles() const { return particles_.size(); }
 
   void AddForceHandler(const std::shared_ptr<ForceHandler> &fh);
+  void RemoveForceHandler(const std::shared_ptr<ForceHandler> &fh);
 
   void Constrain();
 

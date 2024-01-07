@@ -27,6 +27,17 @@ void ParticleSystem::AddForceHandler(const std::shared_ptr<ForceHandler> &fh) {
   force_handlers_.push_back(fh);
 }
 
+void ParticleSystem::RemoveForceHandler(const std::shared_ptr<ForceHandler> &fh) {
+  for (auto iter = force_handlers_.begin();
+       iter != force_handlers_.end();) {
+    if (iter->get() == fh.get()) {
+      iter = force_handlers_.erase(iter);
+    } else {
+      ++iter;
+    }
+  }
+}
+
 void ParticleSystem::Constrain() {
   for (auto &p : particles_) {
     if (p->Position().y < 0) {
