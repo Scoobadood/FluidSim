@@ -18,6 +18,7 @@ public:
 
   void SetState(const std::vector<float> &state);
 
+  std::vector<float> Positions();
   std::vector<float> Derivative();
 
   inline uint32_t NumParticles() const { return particles_.size(); }

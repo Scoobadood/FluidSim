@@ -21,6 +21,7 @@ public:
 
   void SwapBuffers();
 
+  void SetLeftMousePressHandler(const std::function<void(float, float)> &hdlr);
   void SetRightMousePressHandler(const std::function<void(float, float)> &hdlr);
 
   void SetRightMouseReleaseHandler(const std::function<void(float, float)> &hdlr);

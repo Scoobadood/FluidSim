@@ -52,6 +52,75 @@ void init_gl_buffers(GLuint &vao, GLuint &vbo_masses, GLuint &ebo_springs) {
   CHECK_GL_ERROR("Alloc buffers")
 }
 
+/*
+ * Convert a mouse click into a ray in world space coordinates
+ * Convert Mouse Coordinates to Normalized Device Coordinates (NDC):
+ *  Transform the mouse screen coordinates to NDC space (-1 to 1 range).
+ * Create Ray in View Space:
+ *  Transform the NDC coordinates to view space. For a perspective camera, this involves reversing the projection matrix.
+ *  For an orthographic camera, it's a simpler transformation.
+ *  Transform Ray to World Space:
+ *    Transform the ray from view space to world space using the inverse of the camera's view matrix.
+ */
+glm::vec3 mouse_to_ray(uint32_t width,
+                       uint32_t height,
+                       glm::mat4 &proj,
+                       glm::mat4 &view,
+                       uint32_t xpos,
+                       uint32_t ypos) {
+  glm::vec2 ndc{2.0f * (((float) xpos / (float) width) - 0.5f),
+                2.0f * (((float) ypos / (float) height) - 0.5f)};
+  glm::vec4 ray_start_ndc{ndc.x, ndc.y, -1.0f, 1.0f};
+  glm::vec4 ray_end_ndc{ndc.x, ndc.y, 1.0f, 1.0f};
+
+  auto inv_proj = glm::inverse(proj);
+  auto ray_start_view = inv_proj * ray_start_ndc;
+  ray_start_view /= ray_start_view.w;
+  auto ray_end_view = inv_proj * ray_end_ndc;
+  ray_end_view /= ray_end_view.w;
+
+  auto inv_view = glm::inverse(view);
+  auto ray_start_world = inv_view * ray_start_view;
+  ray_start_world /= ray_start_world.w;
+  auto ray_end_world = inv_view * ray_end_view;
+  ray_end_world /= ray_end_world.w;
+  glm::vec3 ray_dir = (ray_end_world - ray_start_world);
+  return glm::normalize(ray_dir);
+}
+
+float point_to_line_dist(const glm::vec3 &P, const glm::vec3 &A, const glm::vec3 &B) {
+  using namespace glm;
+  // L1 to point
+  vec3 AB = B - A;
+  vec3 AP = P - A;
+
+  vec3 cp = glm::cross(AB, AP);
+  // Magnitude of the pll gram
+  float area = glm::length(cp);
+  // This is also perp dist * base (|AB|)
+  float base = glm::length(AB);
+  float perp_dist = area / base;
+  return perp_dist;
+}
+
+int32_t index_of_closest_point(const glm::vec3 &ray, const glm::vec3 &cam_pos,
+                               const std::vector<float> &points) {
+  auto num_points = points.size() / 3;
+  auto index = -1;
+  float min_dist = 10.0f;
+  for (auto i = 0; i < num_points; i++) {
+    auto dist = point_to_line_dist(
+        {points[i * 3], points[i * 3 + 1], points[i * 3 + 2]},
+        cam_pos,
+        cam_pos + (ray * 10.0f));
+    if (dist < min_dist) {
+      min_dist = dist;
+      index = i;
+    }
+  }
+  return index;
+}
+
 /* ******************************************************************************************
  *
  *  Main
@@ -110,10 +179,22 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
 
   CHECK_GL_ERROR("init world")
 
+  glm::mat4 project{1};
+  glm::vec3 cam_pos{0, 0, -6};
+  glm::mat4 view{1};
+
+  window.SetLeftMousePressHandler([&project, &view, &cam_pos, &ps](float mouse_x, float mouse_y) {
+    auto ray = mouse_to_ray(800, 600, project, view, (uint32_t) std::roundf(mouse_x), (uint32_t) std::roundf(mouse_y));
+
+    auto idx = index_of_closest_point(ray, cam_pos, ps.Positions());
+    spdlog::info("Closest point index {}", idx);
+  });
+
   glm::mat4 r(1);
-//  r = glm::rotate_slow(r,(float)M_PI/2.0f, glm::vec3{0,0,1});
+  r = glm::rotate_slow(r, (float) M_PI / 2.0f, glm::vec3{0, 0, 1});
   g_arcball->SetRotation(r);
   auto last_time_s = std::chrono::high_resolution_clock::now();
+
   while (!window.ShouldClose()) {
     int width, height;
     window.GetFrameBufferSize(width, height);
@@ -125,9 +206,9 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
 
     // View Things
     auto ratio = (float) width / (float) height;
-    glm::mat4 project = glm::perspective(glm::radians(35.0f), ratio, 0.1f, 1000.0f);
-    glm::mat4 view{1};
-    view = glm::translate(view, glm::vec3(0, 0, -6));
+    project = glm::perspective(glm::radians(35.0f), ratio, 0.1f, 1000.0f);
+    view = glm::mat4{1};
+    view = glm::translate(view, cam_pos);
     view = view * g_arcball->Rotation();
 
     shader->use();

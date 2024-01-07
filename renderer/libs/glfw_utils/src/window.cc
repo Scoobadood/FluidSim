@@ -118,6 +118,10 @@ void Window::RegisterKeyPressHandler(int32_t key, const std::function<void()> &h
   key_press_handlers_[key] = hdlr;
 }
 
+void Window::SetLeftMousePressHandler(const std::function<void(float, float)> &hdlr) {
+  left_mouse_press_handler_ = hdlr;
+}
+
 void Window::SetRightMousePressHandler(const std::function<void(float, float)> &hdlr) {
   right_mouse_press_handler_ = hdlr;
 }
