@@ -22,6 +22,16 @@ Particle::Particle(const glm::vec3 &position,
   }
 }
 
+void Particle::SetMass(float mass){
+  if (mass <= 0) {
+    spdlog::warn("Invalid mass {}, using infinite mass");
+    inv_mass_ = 0.0f;
+  } else {
+    inv_mass_ = 1.0f / mass;
+  }
+}
+
+
 void Particle::ApplyForce(const glm::vec3 &force) {
   force_ += force;
 }

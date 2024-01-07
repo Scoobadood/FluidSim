@@ -25,6 +25,7 @@ public:
   const glm::vec3 &Velocity() const;
 
   void SetVelocity(const glm::vec3 &velocity);
+  void SetMass(float mass);
 
   glm::vec3 Acceleration() const;
 

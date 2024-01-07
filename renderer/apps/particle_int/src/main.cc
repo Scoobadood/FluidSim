@@ -179,6 +179,8 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
   particles[3]->SetPosition({-2, 2, 0});
   particles[4]->SetPosition({0, 0, 0});
 
+  particles[4]->SetMass(-1.0f);
+
 //  ps.AddForceHandler(std::make_shared<GlobalForceHandler>(glm::vec3{0, -9.8f, 0}));
 
 // Tie them into a chain
@@ -198,8 +200,8 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
   ps.AddForceHandler(std::make_shared<SpringForceHandler>(particles[2], particles[4], RLD, SFD, DP));
   ps.AddForceHandler(std::make_shared<SpringForceHandler>(particles[3], particles[4], RLD, SFD, DP));
 
-//  auto vdh =std::make_shared<ViscousDragHandler>(1.f);
-//  ps.AddForceHandler(vdh);
+  auto vdh =std::make_shared<ViscousDragHandler>(1.f);
+  ps.AddForceHandler(vdh);
 
   CHECK_GL_ERROR("init world")
 
