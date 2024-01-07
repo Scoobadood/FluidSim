@@ -1,6 +1,6 @@
 #include "gl_enum_map.h"
 
-#include <spdlog/spdlog-inl.h>
+#include <spdlog/spdlog.h>
 
 std::string name_for_enum(GLenum type) {
   switch (type) {

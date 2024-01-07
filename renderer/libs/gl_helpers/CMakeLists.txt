@@ -3,24 +3,26 @@ add_definitions(-DGL_SILENCE_DEPRECATION)
 
 add_library(GLHelpers
         SHARED
-        src/shader.cc include/shader.h
-        src/texture.cc include/texture.h
-        src/render_target.cc include/render_target.h
-        src/string_utils.cc include/string_utils.h
-        src/gl_enum_map.cc include/gl_enum_map.h
-        src/gl_error.cc include/gl_error.h
-        )
+        src/shader.cc GLHelpers/shader.h
+        src/texture.cc GLHelpers/texture.h
+        src/render_target.cc GLHelpers/render_target.h
+        src/string_utils.cc GLHelpers/string_utils.h
+        src/gl_enum_map.cc GLHelpers/gl_enum_map.h
+        src/gl_error.cc GLHelpers/gl_error.h
+        src/stbi_impl.cc
+)
 
 target_include_directories(GLHelpers
         PRIVATE
-        ${spdlog_SOURCE_DIR}/include
+        GLHelpers
         PUBLIC
-        include
         ${stb_SOURCE_DIR}
+        .
 )
 
 target_link_libraries(GLHelpers
         PUBLIC
+        spdlog::spdlog
         ${OPENGL_LIBRARIES}
         glm
         )

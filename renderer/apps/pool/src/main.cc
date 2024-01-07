@@ -1,21 +1,16 @@
 #include "spdlog/cfg/env.h"
 #include "spdlog/spdlog.h"
 
-#include "gl_common.h"
-#include "gl_error.h"
-#include "shader.h"
-#include "texture.h"
+
 #include "height_field_sim.h"
 #include "geometry_helper.h"
 
 #include <GLFW/glfw3.h>
-#include "mesh.h"
-#include "model_geometry_helper.h"
-#include "window.h"
-#include "arcball.h"
-#include "mesh_helper.h"
+#include <common/common.h>
+#include <GLHelpers/GLHelpers.h>
+#include <glfw_utils/window.h>
 
-//#define WATER_ENABLED
+#define WATER_ENABLED
 
 ArcBall *g_arcball;
 
@@ -25,8 +20,8 @@ ArcBall *g_arcball;
  *
  * ******************************************************************************************/
 std::shared_ptr<Shader> init_shader() {
-  auto shader = Shader::from_files("/Users/dave/Projects/FluidSim/renderer/pool/shaders/lighting.vert",
-                                   "/Users/dave/Projects/FluidSim/renderer/pool/shaders/lighting.frag");
+  auto shader = Shader::from_files("/Users/dave/Projects/FluidSim/renderer/apps/pool/shaders/lighting.vert",
+                                   "/Users/dave/Projects/FluidSim/renderer/apps/pool/shaders/lighting.frag");
   shader->use();
   shader->set_uniform("light_dir", glm::vec3(2, -10, 15));
   shader->set_uniform("light_intensity", 1.0f);
@@ -62,17 +57,12 @@ void setup_input_handlers(Window &window, std::shared_ptr<HeightField> &hf) {
 Mesh load_scene() {
   std::vector<float> scene_verts;
   std::vector<uint32_t> scene_indices;
-  load_model_from_file("/Users/dave/Projects/FluidSim/renderer/pool/assets/pool_scene.ply", false, true, true,
+  load_model_from_file("/Users/dave/Projects/FluidSim/renderer/apps/pool/assets/pool_scene.ply", false, true, true,
                        scene_verts, scene_indices);
   Mesh scene_mesh{0, 1, -1, 3};
   scene_mesh.SetVertexData(scene_verts);
   scene_mesh.SetIndexData(scene_indices);
   return scene_mesh;
-}
-
-
-void DoPhysics(std::vector<Mesh>& meshes) {
-
 }
 
 /* ******************************************************************************************
@@ -88,7 +78,7 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
 
 
   auto shader = init_shader();
-  auto texture = std::make_shared<Texture>("/Users/dave/Projects/FluidSim/renderer/pool/assets/combi4096.png");
+  auto texture = std::make_shared<Texture>("/Users/dave/Projects/FluidSim/renderer/apps/pool/assets/combi4096.png");
 
   // Create initial geometry
   Mesh scene_mesh = load_scene();
@@ -170,7 +160,6 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
     std::chrono::duration<float> elapsed = finish - start;
     start = finish;
 
-//    DoPhysics(cube_mesh, scene_mesh);
     #ifdef WATER_ENABLED
     hf->Simulate(elapsed.count());
     gh.GenerateGeometry(hf, vertex_data, index_data, true, false);

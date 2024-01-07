@@ -6,7 +6,7 @@
 #include <fstream>
 #include <iomanip>
 #include <glm/gtc/type_ptr.hpp>
-#include <spdlog/spdlog-inl.h>
+#include <spdlog/spdlog.h>
 
 GLuint make_shader(const GLchar *vertex_shader_source[],
                    const GLchar *geometry_shader_source[],

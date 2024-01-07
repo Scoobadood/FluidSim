@@ -3,9 +3,7 @@
 #include "spdlog/cfg/env.h"
 #include <random>
 
-#include "gl_common.h"
-#include "shader.h"
-#include "gl_error.h"
+#include <GLHelpers/GLHelpers.h>
 #include <particles/particles.h>
 #include <common/common.h>
 #include <glfw_utils/window.h>

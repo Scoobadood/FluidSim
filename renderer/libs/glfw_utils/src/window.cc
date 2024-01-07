@@ -1,6 +1,7 @@
-#include "window.h"
+
 #include "spdlog/spdlog.h"
-#include "gl_common.h"
+#include <GLHelpers/GLHelpers.h>
+#include <glfw_utils/window.h>
 
 void mouse_button_callback(GLFWwindow *window, int button, int action, int mods);
 

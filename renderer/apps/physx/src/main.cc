@@ -2,14 +2,9 @@
 #include "spdlog/spdlog.h"
 
 #include <random>
-#include "gl_common.h"
-#include "shader.h"
-#include "arcball.h"
-#include "gl_error.h"
-#include "window.h"
-#include "mesh.h"
-#include "mesh_helper.h"
-#include "texture.h"
+#include <GLHelpers/GLHelpers.h>
+#include <common/common.h>
+#include <glfw_utils/window.h>
 #include "physics_props.h"
 
 ArcBall *g_arcball;
@@ -20,8 +15,8 @@ ArcBall *g_arcball;
  *
  * ******************************************************************************************/
 std::shared_ptr<Shader> init_shader() {
-  auto shader = Shader::from_files("/Users/dave/Projects/FluidSim/renderer/physx/shaders/basic.vert",
-                                   "/Users/dave/Projects/FluidSim/renderer/physx/shaders/basic.frag");
+  auto shader = Shader::from_files("/Users/dave/Projects/FluidSim/renderer/apps/physx/shaders/basic.vert",
+                                   "/Users/dave/Projects/FluidSim/renderer/apps/physx/shaders/basic.frag");
   CHECK_GL_ERROR("Create shader")
   return shader;
 }

@@ -7,7 +7,7 @@
 
 #include <vector>
 #include <array>
-#include "gl_common.h"
+#include <GLHelpers/GLHelpers.h>
 
 class Mesh {
 public:

@@ -5,8 +5,6 @@
 #include <stdexcept>
 #include "spdlog/spdlog.h"
 #include "mesh.h"
-#include "gl_error.h"
-
 
 Mesh::Mesh(int32_t position_attr_idx,
            int32_t normal_attr_idx,
