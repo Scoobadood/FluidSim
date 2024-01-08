@@ -1,3 +1,4 @@
+add_subdirectory(jos_stam_3d)
 add_subdirectory(particle_int)
 add_subdirectory(party)
 add_subdirectory(physx)
