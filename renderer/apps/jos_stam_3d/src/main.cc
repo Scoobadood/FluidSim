@@ -27,8 +27,8 @@ int main(int argc, char *argv[]) {
   glEnable(GL_PROGRAM_POINT_SIZE);
 
   auto shader = Shader::from_files(//
-      "/Users/dave/Projects/FluidSim/renderer/apps/party/shaders/basic.vert",
-      "/Users/dave/Projects/FluidSim/renderer/apps/party/shaders/basic.frag");
+      "/Users/dave/Projects/FluidSim/renderer/apps/jos_stam_3d/shaders/basic.vert",
+      "/Users/dave/Projects/FluidSim/renderer/apps/jos_stam_3d/shaders/basic.frag");
   CHECK_GL_ERROR("Create shader")
 
   /* ************************************************************************************************
@@ -43,35 +43,45 @@ int main(int argc, char *argv[]) {
   GLuint vbo;
   glGenBuffers(1, &vbo);
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
-  float verts[] = {-1, 1, 1,
-                   -1, 1, -1,
-                   -1, -1, -1,
-                   -1, -1, 1,
-                   1, 1, 1,
-                   1, 1, -1,
-                   1, -1, -1,
-                   1, -1, 1
+  float verts[] = {-1, 1, 0, 0, 1,
+                   1, 1, 0,1,1,
+                   1, -1, 0,1,0,
+                   -1, 1, 0,0,1,
+                   1, -1, 0,1,0,
+                   -1, -1, 0,0,0
   };
-  glBufferData(GL_ARRAY_BUFFER, 24 * sizeof(float), verts, GL_STATIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, 6 * 5 * sizeof(float), verts, GL_STATIC_DRAW);
   glEnableVertexAttribArray(0);
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 24, (GLvoid *) nullptr);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 20, (GLvoid *) nullptr);
+  glEnableVertexAttribArray(1);// Texture coords
+  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 20, (GLvoid *) 12);
   CHECK_GL_ERROR("Alloc buffers")
-
 
   /* ************************************************************************************************
    * **
    * **   Make fluid sim
    * **
    * ************************************************************************************************/
-  const int GRID_SIZE = 10;
-  auto sim = std::make_shared<GridFluidSimulator>(GRID_SIZE, GRID_SIZE, 0.1, 0.1);
+  const int GRID_SIZE = 64;
+  auto sim = std::make_shared<GridFluidSimulator3D>(GRID_SIZE, 0.2f);
+  sim->Initialise();
+  sim->AddSource(GRID_SIZE/2, GRID_SIZE-2, 1.0f,0.0, -3.0f);
+  sim->AddSource(1, GRID_SIZE/2, 1.0f,5.0, 0.0f);
+
+  /* ************************************************************************************************
+ * **
+ * **   Create an image and load the data to a texture
+ * **
+ * ************************************************************************************************/
+  std::vector<uint8_t> image_data(GRID_SIZE * GRID_SIZE * 3, 0);
+
+  auto texture = std::make_shared<Texture>(GRID_SIZE, GRID_SIZE);
 
   glm::mat4 r(1);
 //  r = glm::rotate_slow(r,(float)M_PI/2.0f, glm::vec3{0,0,1});
 //  g_arcball->SetRotation(r);
 
   auto timer = std::make_shared<FrameTimer>();
-  auto last_time_s = std::chrono::high_resolution_clock::now();
   while (!window.ShouldClose()) {
     clear_window(window);
 
@@ -80,21 +90,37 @@ int main(int argc, char *argv[]) {
     auto ratio = (float) width / (float) height;
     glm::mat4 project = glm::perspective(glm::radians(35.0f), ratio, 0.1f, 1000.0f);
 
+
+    //
+    //
+    //
+    auto data = sim->Density();
+    image_data.clear();
+    for( auto d : data) {
+      image_data.push_back((uint8_t)(std::roundf(d * 255.0f)));
+      image_data.push_back((uint8_t)(std::roundf(d * 255.0f)));
+      image_data.push_back((uint8_t)(std::roundf(d * 255.0f)));
+    }
+    texture->SetImageData(image_data.data());
+
+
     shader->use();
     shader->set_uniform("project", project);
     glm::mat4 view{1};
     view = glm::translate(view, glm::vec3(0, 0, -10));
 //    view = view * g_arcball->Rotation();
-
     shader->set_uniform("view", view);
     shader->set_uniform("model", glm::mat4(1));
+    texture->BindToTextureUnit(0);
+    shader->set_uniform("tx", 0);
 
-    glDrawArrays(GL_POINTS, 0, 24);
+
+    glDrawArrays(GL_TRIANGLES, 0, 6);
     CHECK_GL_ERROR("Draw")
 
     // Check elapsed time
     auto elapsed = timer->ElapsedTime();
-    sim->Simulate()
+    sim->Simulate(elapsed);
 
     // End of frame
     window.SwapBuffers();

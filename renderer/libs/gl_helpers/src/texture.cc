@@ -2,7 +2,6 @@
 #include "spdlog/spdlog.h"
 #include "gl_common.h"
 
-
 int32_t Texture::MAX_TEXTURE_UNIT_ID = 0;
 
 uint8_t *
@@ -29,6 +28,34 @@ LoadAndFlipImage(const std::string &file_name, int32_t &width, int32_t &height, 
   return image_data;
 }
 
+Texture::Texture(uint32_t width, uint32_t height)//
+    : width_{width}//
+    , height_{height}//
+{
+  if (MAX_TEXTURE_UNIT_ID == 0) {
+    glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS,
+                  &MAX_TEXTURE_UNIT_ID);
+  }
+
+  glActiveTexture(GL_TEXTURE0);
+  glGenTextures(1, &texture_id_);
+  glBindTexture(GL_TEXTURE_2D, texture_id_);
+
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+  glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+
+  auto img_data_sz = width_ * height_ * 3;
+  auto image_data = new uint8_t[img_data_sz];
+  std::memset(image_data, 0, img_data_sz);
+  SetImageData(image_data);
+  delete[] image_data;
+}
+
 Texture::Texture(const std::string &file_name) {
   if (MAX_TEXTURE_UNIT_ID == 0) {
     glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS,
@@ -49,6 +76,13 @@ Texture::Texture(const std::string &file_name) {
   stbi_image_free(image_data);
 }
 
+void Texture::SetImageData(uint8_t *image_data) {
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, texture_id_);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (GLsizei)width_, (GLsizei)height_, 0,
+               GL_RGB, GL_UNSIGNED_BYTE, image_data);
+}
+
 Texture::~Texture() {
   if (texture_id_ != 0) glDeleteTextures(1, &texture_id_);
 }
@@ -61,7 +95,7 @@ Texture::BindToTextureUnit(uint32_t tu) {
     return;
   }
 
-  glActiveTexture(GL_TEXTURE0+tu);
+  glActiveTexture(GL_TEXTURE0 + tu);
   glBindTexture(GL_TEXTURE_2D, texture_id_);
 }
 

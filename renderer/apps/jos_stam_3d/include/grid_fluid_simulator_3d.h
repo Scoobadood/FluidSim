@@ -13,6 +13,12 @@ class GridFluidSimulator3D {
 
   void Simulate(float delta_t);
 
+  const std::vector<float> &Density() const {
+    return density_;
+  }
+
+  void AddSource(uint32_t x, uint32_t y, float amount, float velocity_x, float velocity_y);
+
   void Initialise();
 
  protected:

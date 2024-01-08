@@ -2,10 +2,10 @@
 
 layout (location=0) out vec4 frag_colour;
 
-in vec3 colour;
+uniform sampler2D tx; // Tx
 
-uniform vec3 light_dir;
+in vec2 frag_tex_coord;
 
 void main() {
-    frag_colour = vec4(colour, 1.0);
+    frag_colour = vec4(texture(tx, frag_tex_coord).rgb, 1);
 }

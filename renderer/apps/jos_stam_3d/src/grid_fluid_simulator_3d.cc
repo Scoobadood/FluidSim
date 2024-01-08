@@ -11,7 +11,7 @@ GridFluidSimulator3D::GridFluidSimulator3D(uint32_t size,       //
     : dim_x_{size}                                              //
     , dim_y_{size}                                              //
     , dim_z_{size}                                              //
-    , num_cells_{size * size * size}                            //
+    , num_cells_{size * size}                            //
     , diffusion_rate_{diffusion_rate}                           //
 {
   if (size == 0) {
@@ -23,6 +23,10 @@ GridFluidSimulator3D::GridFluidSimulator3D(uint32_t size,       //
 
 void GridFluidSimulator3D::Initialise() {
   // Set up an initial density and velocity field
+}
+
+void GridFluidSimulator3D::AddSource(uint32_t x, uint32_t y, float amount, float velocity_x, float velocity_y) {
+  sources_[y * dim_x_ + x] = {amount, velocity_x, velocity_y};
 }
 
 void GridFluidSimulator3D::AllocateStorage() {
