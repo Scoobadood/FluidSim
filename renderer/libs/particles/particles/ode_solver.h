@@ -7,5 +7,5 @@
 
 #include "particle_system.h"
 
-void euler_solve(ParticleSystem& ps, float delta_t);
+void euler_solve(std::shared_ptr<ParticleSystem>& ps, float delta_t);
 #endif //FLUIDSIM_ODE_SOLVER_H

@@ -2,7 +2,7 @@ add_executable(pool
         src/main.cc
         src/height_field_sim.cc
         src/geometry_helper.cc include/geometry_helper.h
-        src/renderer.cc include/renderer.h
+        ../particle_int/src/renderer.cc
 )
 
 target_include_directories(pool

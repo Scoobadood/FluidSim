@@ -106,3 +106,21 @@ std::vector<float> ParticleSystem::Positions() {
   }
   return pos;
 }
+
+void ParticleSystem::CreateDragParticleAt(int32_t target_idx, const glm::vec3 &pos) {
+  dragee_index_ = target_idx;
+  drag_particle_ = std::make_shared<Particle>(pos, glm::vec3{1,1,1},-1);
+  auto len = glm::length(particles_[target_idx]->Position() - pos);
+  drag_spring_= std::make_shared<SpringForceHandler>(particles_[target_idx],
+                                       drag_particle_,
+                                       len,
+                                       10,
+                                       1);
+  AddForceHandler(drag_spring_);
+}
+
+void ParticleSystem::StopDragging() {
+  RemoveForceHandler(drag_spring_);
+  drag_particle_ = nullptr;
+  dragee_index_ = -1;
+}

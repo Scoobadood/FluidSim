@@ -28,7 +28,11 @@ public:
 
   void Constrain();
 
-protected:
+  int32_t SelectedIndex() const{ return dragee_index_;}
+  void CreateDragParticleAt(int32_t target_idx, const glm::vec3 &pos);
+  void StopDragging();
+
+ protected:
   void ClearForces();
 
   void ComputeForces();
@@ -37,6 +41,9 @@ private:
   std::vector<std::shared_ptr<Particle>> particles_;
   std::shared_ptr<ParticleFactory> factory_;
   std::vector<std::shared_ptr<ForceHandler>> force_handlers_;
+  std::shared_ptr<Particle> drag_particle_;
+  int32_t dragee_index_;
+  std::shared_ptr<ForceHandler> drag_spring_;
 };
 
 #endif //FLUIDSIM_PARTICLE_SYSTEM_H

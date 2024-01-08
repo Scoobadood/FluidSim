@@ -18,6 +18,9 @@ public:
   bool ShouldClose();
 
   void GetFrameBufferSize(int32_t &width, int32_t &height);
+  uint32_t Width() const { return width_;}
+  uint32_t Height() const { return height_;}
+
 
   void SwapBuffers();
 
@@ -35,6 +38,9 @@ public:
 
 private:
   GLFWwindow *window_;
+  uint32_t width_;
+  uint32_t height_;
+
   std::function<void(float, float)> right_mouse_press_handler_;
   std::function<void(float, float)> right_mouse_release_handler_;
   std::function<void(float, float)> right_mouse_drag_handler_;
@@ -51,6 +57,7 @@ private:
   friend void mouse_move_callback(GLFWwindow *window, double xpos, double ypos);
 
   friend void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods);
+
 
 };
 

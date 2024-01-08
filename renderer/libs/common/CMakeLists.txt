@@ -3,6 +3,7 @@ add_library(common SHARED
         src/mesh.cpp common/mesh.h
         src/model_geometry_helper.cc common/model_geometry_helper.h
         src/mesh_helper.cc
+        src/frame_timer.cc common/frame_timer.h
         common/common.h
 )
 
