@@ -7,9 +7,7 @@
 
 class GridFluidSimulator3D {
  public:
-  GridFluidSimulator3D(uint32_t size,      //
-                       float diffusion_rate //
-  );
+  GridFluidSimulator3D(uint32_t size, float diffusion_rate);
 
   void Simulate(float delta_t);
 
@@ -17,7 +15,7 @@ class GridFluidSimulator3D {
     return density_;
   }
 
-  void AddSource(uint32_t x, uint32_t y, float amount, float velocity_x, float velocity_y);
+  void AddSource(uint32_t x, uint32_t y, uint32_t z, float amount, float velocity_x, float velocity_y, float velocity_z);
 
   void Initialise();
 
@@ -75,7 +73,8 @@ class GridFluidSimulator3D {
 
   float diffusion_rate_;
 
-  std::map<uint32_t, std::tuple<float, float, float>> sources_;
+  // Map index to (amount, vel_x, vel_y, vel_z)
+  std::map<uint32_t, std::tuple<float, float, float, float>> sources_;
 };
 
 #endif // GRID_FLUID_SIMULATOR_H
