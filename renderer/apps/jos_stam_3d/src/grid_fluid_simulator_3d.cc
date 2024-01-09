@@ -139,22 +139,32 @@ so
   }
 }
 
+/**
+ * Backwardd advection solver for a value
+ * @return
+ */
 float GridFluidSimulator3D::AdvectValue(const std::vector<float> &velocity_x,
                                         const std::vector<float> &velocity_y,
+                                        const std::vector<float> &velocity_z,
                                         const std::vector<float> &source_data,
-                                        uint32_t x, uint32_t y,
+                                        uint32_t x, uint32_t y, uint32_t z,
                                         float delta_t) const {
-  auto idx = Index(x, y);
+  auto idx = Index(x, y, z);
 
   // Get the velocity for this cell
   auto vx = velocity_x.at(idx);
   auto vy = velocity_y.at(idx);
+  auto vz = velocity_z.at(idx);
 
   // Get the source point for that flow
   auto source_x = ((float) x + 0.5f) - vx * delta_t;
   auto source_y = ((float) y + 0.5f) - vy * delta_t;
+  auto source_z = ((float) z + 0.5f) - vz * delta_t;
+
+  // Force into bounds
   source_x = std::fmaxf(0.5f, std::fminf((float) dim_x_ - 0.5f, source_x));
   source_y = std::fmaxf(0.5f, std::fminf((float) dim_y_ - 0.5f, source_y));
+  source_z = std::fmaxf(0.5f, std::fminf((float) dim_z_ - 0.5f, source_z));
 
   /* 0     1     2     3
    * +-----+-----+-----+  0
@@ -172,20 +182,33 @@ float GridFluidSimulator3D::AdvectValue(const std::vector<float> &velocity_x,
    * +-----+-----+-----+  3
    */
   // Get the base coord
-  auto base_x = std::floorf(source_x - 0.5f);
-  auto base_y = std::floorf(source_y - 0.5f);
+  auto base_x = (uint32_t) std::floorf(source_x - 0.5f);
+  auto base_y = (uint32_t) std::floorf(source_y - 0.5f);
+  auto base_z = (uint32_t) std::floorf(source_z - 0.5f);
 
   // And the fractional offset
-  auto frac_x = source_x - base_x - 0.5f;
-  auto frac_y = source_y - base_y - 0.5f;
+  auto frac_x = source_x - (float) base_x - 0.5f;
+  auto frac_y = source_y - (float) base_y - 0.5f;
+  auto frac_z = source_z - (float) base_z - 0.5f;
 
-  // Interpolate top and bottom
-  auto bl = source_data.at(Index((uint32_t) base_x, (uint32_t) base_y));
-  auto br = source_data.at(Index((uint32_t) base_x + 1, (uint32_t) base_y));
-  auto tl = source_data.at(Index((uint32_t) base_x, (uint32_t) base_y + 1));
-  auto tr = source_data.at(Index((uint32_t) base_x + 1, (uint32_t) base_y + 1));
-  auto top_lerp = Lerp(tl, tr, frac_x);
-  auto btm_lerp = Lerp(bl, br, frac_x);
+  // Tri-linear interpolation over...
+  auto blf = source_data.at(Index(base_x, base_y, base_z));
+  auto blb = source_data.at(Index(base_x, base_y, base_z + 1));
+  auto brf = source_data.at(Index(base_x + 1, base_y, base_z));
+  auto brb = source_data.at(Index(base_x + 1, base_y, base_z + 1));
+  auto tlf = source_data.at(Index(base_x, base_y + 1, base_z));
+  auto tlb = source_data.at(Index(base_x, base_y + 1, base_z + 1));
+  auto trf = source_data.at(Index(base_x + 1, base_y + 1, base_z));
+  auto trb = source_data.at(Index(base_x + 1, base_y + 1, base_z + 1));
+
+  auto top_back_lerp = Lerp(tlb, trb, frac_x);
+  auto top_front_lerp = Lerp(tlf, trf, frac_x);
+  auto top_lerp = Lerp(top_back_lerp, top_front_lerp, frac_z);
+
+  auto btm_back_lerp = Lerp(blb, brb, frac_x);
+  auto btm_front_lerp = Lerp(blf, brf, frac_x);
+  auto btm_lerp = Lerp(btm_back_lerp, btm_front_lerp, frac_z);
+
   auto final_val = Lerp(btm_lerp, top_lerp, frac_y);
   // interpolate top to bottom
   return final_val;
@@ -195,9 +218,13 @@ void GridFluidSimulator3D::AdvectDensity(const std::vector<float> &curr_density,
                                          float delta_t,
                                          std::vector<float> &advected_density) const {
   std::fill(advected_density.begin(), advected_density.end(), 0.0f);
-  for (auto y = 1; y < dim_y_ - 1; ++y) {
-    for (auto x = 1; x < dim_x_ - 1; ++x) {
-      advected_density.at(Index(x, y)) = AdvectValue(velocity_x_, velocity_y_, curr_density, x, y, delta_t);
+
+  for (auto z = 1; z < dim_z_ - 1; ++z) {
+    for (auto y = 1; y < dim_y_ - 1; ++y) {
+      for (auto x = 1; x < dim_x_ - 1; ++x) {
+        advected_density.at(Index(x, y, z)) =
+            AdvectValue(velocity_x_, velocity_y_, velocity_z_, curr_density, x, y, z, delta_t);
+      }
     }
   }
   CorrectBoundaryDensities(advected_density);
@@ -205,12 +232,16 @@ void GridFluidSimulator3D::AdvectDensity(const std::vector<float> &curr_density,
 
 void GridFluidSimulator3D::AdvectVelocity(std::vector<float> &advected_velocity_x,
                                           std::vector<float> &advected_velocity_y,
+                                          std::vector<float> &advected_velocity_z,
                                           float delta_t) const {
-  for (auto y = 1; y < dim_y_ - 1; ++y) {
-    for (auto x = 1; x < dim_x_ - 1; ++x) {
-      auto idx = Index(x, y);
-      advected_velocity_x.at(idx) = AdvectValue(velocity_x_, velocity_y_, velocity_x_, x, y, delta_t);
-      advected_velocity_y.at(idx) = AdvectValue(velocity_x_, velocity_y_, velocity_y_, x, y, delta_t);
+  for (auto z = 1; z < dim_z_ - 1; ++z) {
+    for (auto y = 1; y < dim_y_ - 1; ++y) {
+      for (auto x = 1; x < dim_x_ - 1; ++x) {
+        auto idx = Index(x, y, z);
+        advected_velocity_x.at(idx) = AdvectValue(velocity_x_, velocity_y_, velocity_z_, velocity_x_, x, y, z, delta_t);
+        advected_velocity_y.at(idx) = AdvectValue(velocity_x_, velocity_y_, velocity_z_, velocity_y_, x, y, z, delta_t);
+        advected_velocity_z.at(idx) = AdvectValue(velocity_x_, velocity_y_, velocity_z_, velocity_z_, x, y, z, delta_t);
+      }
     }
   }
   CorrectBoundaryVelocities(advected_velocity_x, advected_velocity_y);
@@ -385,6 +416,7 @@ void GridFluidSimulator3D::Simulate(float delta_t) {
   std::vector<float> temp_density(num_cells_, 0);
   std::vector<float> temp_velocity_x(num_cells_, 0);
   std::vector<float> temp_velocity_y(num_cells_, 0);
+  std::vector<float> temp_velocity_z(num_cells_, 0);
 
   ProcessSources();
   CorrectBoundaryDensities(density_);
@@ -402,7 +434,7 @@ void GridFluidSimulator3D::Simulate(float delta_t) {
   std::memcpy(velocity_x_.data(), temp_velocity_x.data(), num_cells_ * sizeof(float));
   std::memcpy(velocity_y_.data(), temp_velocity_y.data(), num_cells_ * sizeof(float));
 
-  AdvectVelocity(temp_velocity_x, temp_velocity_y, delta_t);
+  AdvectVelocity(temp_velocity_x, temp_velocity_y, temp_velocity_z, delta_t);
   std::memcpy(velocity_x_.data(), temp_velocity_x.data(), num_cells_ * sizeof(float));
   std::memcpy(velocity_y_.data(), temp_velocity_y.data(), num_cells_ * sizeof(float));
 

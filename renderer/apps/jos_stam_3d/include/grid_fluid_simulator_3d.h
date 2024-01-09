@@ -40,8 +40,9 @@ class GridFluidSimulator3D {
   [[nodiscard]]
   float AdvectValue(const std::vector<float> &velocity_x,
                     const std::vector<float> &velocity_y,
+                    const std::vector<float> &velocity_z,
                     const std::vector<float> &source_data,
-                    uint32_t x, uint32_t y,
+                    uint32_t x, uint32_t y, uint32_t z,
                     float delta_t) const;
 
   // Compute an index into data arrays given x,y,z coords. Does not bounds check.
@@ -58,6 +59,7 @@ class GridFluidSimulator3D {
 
   void AdvectVelocity(std::vector<float> &advected_velocity_x,
                       std::vector<float> &advected_velocity_y,
+                      std::vector<float> &advected_velocity_z,
                       float delta_t) const;
 
   void ComputeDivergence(std::vector<float> &divergence) const;
