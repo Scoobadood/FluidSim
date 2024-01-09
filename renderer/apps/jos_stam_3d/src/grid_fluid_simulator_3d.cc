@@ -6,13 +6,15 @@
 const uint32_t NUM_GS_ITERS = 10;
 
 GridFluidSimulator3D::GridFluidSimulator3D(uint32_t size,       //
-                                           float diffusion_rate //
+                                           float diffusion_rate,//
+                                           float viscosity      //
 )                                                               //
     : dim_x_{size}                                              //
     , dim_y_{size}                                              //
     , dim_z_{size}                                              //
     , num_cells_{size * size * size}                            //
     , diffusion_rate_{diffusion_rate}                           //
+    , viscosity_{viscosity}                                     //
 {
   if (size == 0) {
     throw std::runtime_error("Size must be non-zero");
@@ -36,9 +38,14 @@ void GridFluidSimulator3D::Initialise() {
  * @param velocity_y
  * @param velocity_z
  */
-void GridFluidSimulator3D::AddSource(uint32_t x, uint32_t y, uint32_t z, float amount, float velocity_x, float velocity_y, float velocity_z){
-  auto idx = z * (dim_x_ * dim_y_) + y * dim_x_ + x;
-  sources_[idx] = {amount, velocity_x, velocity_y, velocity_z};
+void GridFluidSimulator3D::AddSource(uint32_t x,
+                                     uint32_t y,
+                                     uint32_t z,
+                                     float amount,
+                                     float velocity_x,
+                                     float velocity_y,
+                                     float velocity_z) {
+  sources_[Index(x, y, z)] = {amount, velocity_x, velocity_y, velocity_z};
 }
 
 void GridFluidSimulator3D::AllocateStorage() {
@@ -48,48 +55,87 @@ void GridFluidSimulator3D::AllocateStorage() {
   velocity_z_.resize(num_cells_, 0);
 }
 
-void GridFluidSimulator3D::Diffuse(const std::vector<float> &current_density,
+/**
+ * Diffuse a value to neighbours
+ *
+ * @param current_amount
+ * @param delta_t
+ * @param next_amount
+ */
+void GridFluidSimulator3D::Diffuse(const std::vector<float> &current_amount,
+                                   float diffusion_rate,
                                    float delta_t,
-                                   std::vector<float> &next_density) {
-  // Initialise target_density with current values because why not
-  std::memcpy(next_density.data(), current_density.data(), num_cells_ * sizeof(float));
+                                   std::vector<float> &next_amount) {
 
-  // Run four iterations of GS
+  // Initialise next_amount with current values (though any value would do)
+  std::memcpy(next_amount.data(), current_amount.data(), num_cells_ * sizeof(float));
+
+  // Run A few iterations of the GS solver
   // Dn(x,y) = Dc(x,y) + (k*0.25*(Dn(x+1,y)+Dn(x-1,y)+Dn(x,y+1)+Dn(x,y-1)))/(1+k)
 
-  auto k = delta_t * diffusion_rate_;
+  auto k = delta_t * diffusion_rate;
   for (auto iter = 0; iter < NUM_GS_ITERS; ++iter) {
-    for (auto y = 1; y < dim_y_ - 1; ++y) {
-      for (auto x = 1; x < dim_x_ - 1; ++x) {
-        auto idx = Index(x, y);
+    for (auto z = 1; z < dim_z_ - 1; ++z) {
+      for (auto y = 1; y < dim_y_ - 1; ++y) {
+        for (auto x = 1; x < dim_x_ - 1; ++x) {
+          auto idx = Index(x, y, z);
 
-        float total_nbrs = 0.0f;
-        float nbr_count = 0.0f;
-        if (x > 1) {
-          total_nbrs += next_density.at(idx - 1);
-          nbr_count += 1.0f;
-        }
-        if (x < dim_x_ - 1) {
-          total_nbrs += next_density.at(idx + 1);
-          nbr_count += 1.0f;
-        }
-        if (y > 0) {
-          total_nbrs += next_density.at(idx - dim_x_);
-          nbr_count += 1.0f;
-        }
-        if (y < dim_y_ - 1) {
-          total_nbrs += next_density.at(idx + dim_x_);
-          nbr_count += 1.0f;
-        }
-        auto mean_nbr = total_nbrs / nbr_count;
+          float total_nbrs = 0.0f;
 
-        //x[IX(i,j)] = (x0[IX(i,j)] + a*(x[IX(i-1,j)]+x[IX(i+1,j)]+x[IX(i,j-1)]+x[IX(i,j+1)]))/(1+4*a)
+          float nbr_count = 0.0f;
+          if (x > 1) {
+            total_nbrs += next_amount.at(idx - 1);
+            nbr_count += 1.0f;
+          }
+          if (x < dim_x_ - 1) {
+            total_nbrs += next_amount.at(idx + 1);
+            nbr_count += 1.0f;
+          }
 
-        auto new_val = (current_density.at(idx) + (k * mean_nbr)) / (k + 1.0f);
-        next_density.at(idx) = new_val;
+          if (y > 0) {
+            total_nbrs += next_amount.at(idx - dim_x_);
+            nbr_count += 1.0f;
+          }
+          if (y < dim_y_ - 1) {
+            total_nbrs += next_amount.at(idx + dim_x_);
+            nbr_count += 1.0f;
+          }
+
+          if (z > 0) {
+            total_nbrs += next_amount.at(idx - (dim_x_ * dim_y_));
+            nbr_count += 1.0f;
+          }
+          if (z < dim_z_ - 1) {
+            total_nbrs += next_amount.at(idx + (dim_x_ * dim_y_));
+            nbr_count += 1.0f;
+          }
+/*
+ Deriv of 3D stam equations:
+ Each cell will lose content to each 8 neighbours and also gain from each neighbour, each timestep
+ So if we have a diffusion at time t of x0[i,j,k] then we can say that
+
+ x0[i,j,k] = x[i,j,k] - k * (x[i-1,j,k] + x[i+1,j,k] + x[i,j-1,k] + x[i,j+1,k] + x[i,j,k-1] + x[i,j,k+1] - 6 * x[i,j,k])
+
+ so
+
+ x[i,j,k] = x0[i,j,k] + k * (x[i-1,j,k] + x[i+1,j,k] + x[i,j-1,k] + x[i,j+1,k] + x[i,j,k-1] + x[i,j,k+1] - 6 * x[i,j,k])
+
+          = x0[i,j,k] + k * (x[i-1,j,k] + x[i+1,j,k] + x[i,j-1,k] + x[i,j+1,k] + x[i,j,k-1] + x[i,j,k+1]) - 6k * x[i,j,k]
+
+so
+ x[i,j,k] + 6k * x[i,j,k] = x0[i,j,k] - k * (x[i-1,j,k] + x[i+1,j,k] + x[i,j-1,k] + x[i,j+1,k] + x[i,j,k-1] + x[i,j,k+1])
+
+ x[i,j,k] (1+6k) =  x0[i,j,k] - k * (x[i-1,j,k] + x[i+1,j,k] + x[i,j-1,k] + x[i,j+1,k] + x[i,j,k-1] + x[i,j,k+1])
+
+ x[i,j,k] = (1/(1+6k)) * (x0[i,j,k] - k * (x[i-1,j,k] + x[i+1,j,k] + x[i,j-1,k] + x[i,j+1,k] + x[i,j,k-1] + x[i,j,k+1]))
+ */
+
+          auto new_val = (1.0f / (1.0f + nbr_count)) * (current_amount.at(idx) - k * total_nbrs);
+          next_amount.at(idx) = new_val;
+        }
       }
     }
-    CorrectBoundaryDensities(next_density);
+    CorrectBoundaryDensities(next_amount);
   }
 }
 
@@ -344,14 +390,14 @@ void GridFluidSimulator3D::Simulate(float delta_t) {
   CorrectBoundaryDensities(density_);
   CorrectBoundaryVelocities(velocity_x_, velocity_y_);
 
-  Diffuse(density_, delta_t, temp_density);
+  Diffuse(density_, diffusion_rate_, delta_t, temp_density);
   std::memcpy(density_.data(), temp_density.data(), num_cells_ * sizeof(float));
 
   AdvectDensity(density_, delta_t, temp_density);
   std::memcpy(density_.data(), temp_density.data(), num_cells_ * sizeof(float));
 
-  Diffuse(velocity_x_, delta_t, temp_velocity_x);
-  Diffuse(velocity_y_, delta_t, temp_velocity_y);
+  Diffuse(velocity_x_, viscosity_, delta_t, temp_velocity_x);
+  Diffuse(velocity_y_, viscosity_, delta_t, temp_velocity_y);
   CorrectBoundaryVelocities(temp_velocity_x, temp_velocity_y);
   std::memcpy(velocity_x_.data(), temp_velocity_x.data(), num_cells_ * sizeof(float));
   std::memcpy(velocity_y_.data(), temp_velocity_y.data(), num_cells_ * sizeof(float));

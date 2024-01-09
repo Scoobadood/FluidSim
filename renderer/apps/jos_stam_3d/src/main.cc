@@ -67,8 +67,8 @@ int main(int argc, char *argv[]) {
   const int GRID_SIZE = 64;
   auto sim = std::make_shared<GridFluidSimulator3D>(GRID_SIZE, 0.2f);
   sim->Initialise();
-  sim->AddSource(GRID_SIZE / 2, GRID_SIZE - 2, GRID_SIZE/2, 1.0f, 0.0, -3.0f, 0.0f);
-  sim->AddSource(1, GRID_SIZE / 2, GRID_SIZE/2, 1.0f, 0.0, 0.0f, -1.0f);
+  sim->AddSource(GRID_SIZE / 2, GRID_SIZE - 2, 0, 1.0f, 0.0, -3.0f, 0.0f);
+  sim->AddSource(1, GRID_SIZE / 2, 0, 1.0f, 3.0, 0.0f, 0.0f);
 
   /* ************************************************************************************************
    * **

@@ -7,7 +7,7 @@
 
 class GridFluidSimulator3D {
  public:
-  GridFluidSimulator3D(uint32_t size, float diffusion_rate);
+  GridFluidSimulator3D(uint32_t size, float diffusion_rate, float viscosity = 1.0f);
 
   void Simulate(float delta_t);
 
@@ -15,14 +15,21 @@ class GridFluidSimulator3D {
     return density_;
   }
 
-  void AddSource(uint32_t x, uint32_t y, uint32_t z, float amount, float velocity_x, float velocity_y, float velocity_z);
+  void AddSource(uint32_t x,
+                 uint32_t y,
+                 uint32_t z,
+                 float amount,
+                 float velocity_x,
+                 float velocity_y,
+                 float velocity_z);
 
   void Initialise();
 
  protected:
-  void Diffuse(const std::vector<float> &current_density,
+  void Diffuse(const std::vector<float> &current_amount,
+               float diffusion_rate_,
                float delta_t,
-               std::vector<float> &next_density);
+               std::vector<float> &next_amount);
 
   void SuppressDivergence();
 
@@ -37,7 +44,13 @@ class GridFluidSimulator3D {
                     uint32_t x, uint32_t y,
                     float delta_t) const;
 
-  [[nodiscard]] inline uint32_t Index(uint32_t x, uint32_t y) const { return y * dim_x_ + x; };
+  // Compute an index into data arrays given x,y,z coords. Does not bounds check.
+  [[nodiscard]] inline uint32_t Index(uint32_t x, uint32_t y, uint32_t z) const {
+    return (z * dim_x_ * dim_y_) + (y * dim_x_) + x;
+  };
+  [[nodiscard]] inline uint32_t Index(uint32_t x, uint32_t y) const {
+    return (y * dim_x_) + x;
+  };
 
   void AdvectDensity(const std::vector<float> &curr_density,
                      float delta_t,
@@ -72,6 +85,7 @@ class GridFluidSimulator3D {
   std::vector<float> velocity_z_;
 
   float diffusion_rate_;
+  float viscosity_;
 
   // Map index to (amount, vel_x, vel_y, vel_z)
   std::map<uint32_t, std::tuple<float, float, float, float>> sources_;
