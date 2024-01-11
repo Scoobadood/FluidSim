@@ -64,22 +64,35 @@ int main(int argc, char *argv[]) {
    * **   Make fluid sim
    * **
    * ************************************************************************************************/
-  const int GRID_SIZE = 64;
-  auto sim = std::make_shared<GridFluidSimulator3D>(GRID_SIZE, 0.2f);
-  sim->Initialise();
-  sim->AddSource(GRID_SIZE / 2, GRID_SIZE - 2, 0, 1.0f, 0.0, -3.0f, 0.0f);
-  sim->AddSource(1, GRID_SIZE / 2, 0, 1.0f, 3.0, 0.0f, 0.0f);
+  const int GRID_WIDTH = 64;
+  const int GRID_HEIGHT = 64;
+  const int GRID_DEPTH = 3;
+  auto sim = std::make_shared<GridFluidSimulator3D>(GRID_WIDTH,
+                                                    GRID_HEIGHT,
+                                                    GRID_DEPTH,
+                                                    1.0f * GRID_WIDTH,
+                                                    1.0f * GRID_HEIGHT,
+                                                    1.0f * GRID_DEPTH,
+                                                    0.0f,
+                                                    0.0f,
+                                                    0.00001f);
+
+  // Set up a source
+  auto mid_idx = (GRID_WIDTH * GRID_HEIGHT * (GRID_DEPTH / 2)) + (GRID_WIDTH * (GRID_HEIGHT / 2)) + (GRID_WIDTH / 2);
+  std::vector<float> source(GRID_WIDTH * GRID_HEIGHT * GRID_DEPTH, 0);
+  std::vector<vec3f> force(GRID_WIDTH * GRID_HEIGHT * GRID_DEPTH, vec3f{0.0f, 0.0f, 0.0f});
+  source.at(mid_idx) = 10.0f;
+  force.at(mid_idx - (GRID_WIDTH / 4)) = {0.0f, 0.0001f, 0.0f};
 
   /* ************************************************************************************************
    * **
    * **   Make a texture to hold the render
    * **
    * ************************************************************************************************/
-  auto texture = std::make_shared<Texture>(GRID_SIZE, GRID_SIZE);
-
+  auto texture = std::make_shared<Texture>(GRID_WIDTH, GRID_HEIGHT);
 
   // Allocate image data to which to render.
-  std::vector<uint8_t> image_data(GRID_SIZE * GRID_SIZE * 3, 0);
+  std::vector<uint8_t> image_data(GRID_WIDTH * GRID_HEIGHT * 3, 0);
 
   glm::mat4 r(1);
 //  r = glm::rotate_slow(r,(float)M_PI/2.0f, glm::vec3{0,0,1});
@@ -94,7 +107,6 @@ int main(int argc, char *argv[]) {
     auto ratio = (float) width / (float) height;
     glm::mat4 project = glm::perspective(glm::radians(35.0f), ratio, 0.1f, 1000.0f);
 
-
     /* ************************************************************************************************
      * **
      * **   Render the fluid sim into the image data and load to texture
@@ -102,10 +114,24 @@ int main(int argc, char *argv[]) {
      * ************************************************************************************************/
     auto data = sim->Density();
     image_data.clear();
-    for (auto d : data) {
-      image_data.push_back((uint8_t) (std::roundf(d * 255.0f)));
-      image_data.push_back((uint8_t) (std::roundf(d * 255.0f)));
-      image_data.push_back((uint8_t) (std::roundf(d * 255.0f)));
+    // Planar offset for middle of sim
+    auto data_plane_size = GRID_WIDTH * GRID_HEIGHT;
+    auto mid_plane_offset = data_plane_size * (GRID_DEPTH / 2);
+
+    auto min_d = std::numeric_limits<float>::max();
+    auto max_d = std::numeric_limits<float>::lowest();
+    for (auto idx = 0; idx < data_plane_size; ++idx) {
+      auto d = data.at(idx + mid_plane_offset);
+      if (d < min_d) min_d = d;
+      if (d > max_d) max_d = d;
+    }
+    auto scale = 255.0f / (max_d - min_d);
+    for (auto idx = 0; idx < data_plane_size; ++idx) {
+      auto d = data.at(idx + mid_plane_offset);
+      auto v = (uint8_t) std::fminf(255.0f, (d - min_d) * scale);
+      image_data.push_back(v);
+      image_data.push_back(v);
+      image_data.push_back(v);
     }
     texture->SetImageData(image_data.data());
 
@@ -117,7 +143,7 @@ int main(int argc, char *argv[]) {
     shader->use();
     shader->set_uniform("project", project);
     glm::mat4 view{1};
-    view = glm::translate(view, glm::vec3(0, 0, -10));
+    view = glm::translate(view, glm::vec3(0, 0, -5));
 //    view = view * g_arcball->Rotation();
     shader->set_uniform("view", view);
     shader->set_uniform("model", glm::mat4(1));
@@ -133,7 +159,7 @@ int main(int argc, char *argv[]) {
      * **
      * ************************************************************************************************/
     auto elapsed = timer->ElapsedTime();
-    sim->Simulate(elapsed);
+    sim->Simulate(source, force, elapsed);
 
     // End of frame
     window.SwapBuffers();

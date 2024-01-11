@@ -4,40 +4,50 @@
 #include <cstdint>
 #include <vector>
 #include <map>
+#include "vectors.h"
 
 class GridFluidSimulator3D {
  public:
-  GridFluidSimulator3D(uint32_t size, float diffusion_rate, float viscosity = 1.0f);
+  GridFluidSimulator3D(uint32_t num_cells_x,
+                       uint32_t num_cells_y,
+                       uint32_t num_cells_z,
+                       float size_x,
+                       float size_y,
+                       float size_z,
+                       float diffusion_rate,
+                       float dissipation_rate,
+                       float viscosity);
 
-  void Simulate(float delta_t);
+  void Simulate(const std::vector<float> &sources,
+                const std::vector<vec3f> &forces, float delta_);
 
   const std::vector<float> &Density() const {
-    return density_;
+    return content_;
   }
-
-  void AddSource(uint32_t x,
-                 uint32_t y,
-                 uint32_t z,
-                 float amount,
-                 float velocity_x,
-                 float velocity_y,
-                 float velocity_z);
-
-  void Initialise();
-
- protected:
-  void Diffuse(const std::vector<float> &current_amount,
-               float diffusion_rate_,
-               float delta_t,
-               std::vector<float> &next_amount);
-
-  void SuppressDivergence();
 
  private:
   void AllocateStorage();
-  [[maybe_unused]] void ProcessSources();
 
-  [[nodiscard]]
+  // Velocity Solver
+  void VelocityStep(const std::vector<vec3f> &forces, float delta_);
+  void ApplyForces(const std::vector<vec3f> &forces, float delta_);
+  void AdvectVelocity(float delta_t);
+  void DiffuseVelocity(float delta_t);
+  void Project();
+
+  // Scalar solver
+  void ScalarStep(const std::vector<float> &sources, float delta_);
+  void ApplySources(const std::vector<float> &sources, float delta_);
+  void AdvectScalar(float delta_t);
+  void DiffuseScalar(float delta_t);
+  void Dissipate(float delta_t);
+
+  void Diffuse(const std::vector<float> &current_amount,
+               float diffusion_rate_,
+               float delta_t,
+               bool is_velocity,
+               std::vector<float> &next_amount);
+
   float AdvectValue(const std::vector<float> &velocity_x,
                     const std::vector<float> &velocity_y,
                     const std::vector<float> &velocity_z,
@@ -45,52 +55,28 @@ class GridFluidSimulator3D {
                     uint32_t x, uint32_t y, uint32_t z,
                     float delta_t) const;
 
-  // Compute an index into data arrays given x,y,z coords. Does not bounds check.
-  [[nodiscard]] inline uint32_t Index(uint32_t x, uint32_t y, uint32_t z) const {
-    return (z * dim_x_ * dim_y_) + (y * dim_x_) + x;
-  };
-  [[nodiscard]] inline uint32_t Index(uint32_t x, uint32_t y) const {
-    return (y * dim_x_) + x;
+  // Compute an index into data arrays given x,y,z coords. Does not check bounds.
+  inline uint32_t Index(uint32_t x, uint32_t y, uint32_t z) const {
+    return (z * num_cells_.x * num_cells_.y) + (y * num_cells_.x) + x;
   };
 
-  void AdvectDensity(const std::vector<float> &curr_density,
-                     float delta_t,
-                     std::vector<float> &next_density) const;
-
-  void AdvectVelocity(std::vector<float> &advected_velocity_x,
-                      std::vector<float> &advected_velocity_y,
-                      std::vector<float> &advected_velocity_z,
-                      float delta_t) const;
-
-  void ComputeDivergence(std::vector<float> &divergence) const;
-
-  void ComputePressure(const std::vector<float> &divergence, std::vector<float> &pressure) const;
-
-  void ComputeCurlField(const std::vector<float> &pressure,
-                        std::vector<float> &curl_x,
-                        std::vector<float> &curl_y) const;
-
-  void CorrectBoundaryDensities(std::vector<float> &densities) const;
-
-  void CorrectBoundaryVelocities(std::vector<float> &velocity_x,
-                                 std::vector<float> &velocity_y) const;
+  void SetBoundary(std::vector<float> &src, float scale);
 
   static inline float Lerp(float from, float to, float pct) { return from + pct * (to - from); }
 
-  uint32_t dim_x_;
-  uint32_t dim_y_;
-  uint32_t dim_z_;
-  uint32_t num_cells_;
-  std::vector<float> density_;
+  vec3u num_cells_;
+  vec3f size_;
+  vec3f cell_size_;
+  uint32_t total_cells_;
+  std::vector<float> content_;
   std::vector<float> velocity_x_;
   std::vector<float> velocity_y_;
   std::vector<float> velocity_z_;
 
   float diffusion_rate_;
+  float dissipation_rate_;
   float viscosity_;
-
-  // Map index to (amount, vel_x, vel_y, vel_z)
-  std::map<uint32_t, std::tuple<float, float, float, float>> sources_;
+  float density_;
 };
 
 #endif // GRID_FLUID_SIMULATOR_H
