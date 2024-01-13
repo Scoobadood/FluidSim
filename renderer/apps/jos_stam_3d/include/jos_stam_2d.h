@@ -9,6 +9,7 @@ class JosStam2D {
   ~JosStam2D();
   float *dens_;
   void simulate(float dt, float *force_x, float *force_y, float *source, float viscosity, float diffusion_rate);
+  inline void get_dimensions(uint32_t &size, bool include_boundary = false) const { size = N_ + (include_boundary ? 2 : 0); }
 
  private:
   void add_source(float *target, const float *source, float delta_t) const;

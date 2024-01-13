@@ -183,6 +183,6 @@ void JosStam2D::simulate(float delta_t,
                          float viscosity,
                          float diffusion_rate) {
 
-//  velocity_step(force_x, force_y, viscosity, delta_t);
+  velocity_step(force_x, force_y, viscosity, delta_t);
   density_step(source, diffusion_rate, delta_t);
 }
