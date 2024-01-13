@@ -42,11 +42,10 @@ class GridFluidSimulator3D {
   void DiffuseScalar(float delta_t);
   void Dissipate(float delta_t);
 
-  void Diffuse(const std::vector<float> &current_amount,
+  void Diffuse(std::vector<float> &current_amount,
                float diffusion_rate_,
                float delta_t,
-               bool is_velocity,
-               std::vector<float> &next_amount);
+               bool is_velocity);
 
   float AdvectValue(const std::vector<float> &velocity_x,
                     const std::vector<float> &velocity_y,

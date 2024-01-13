@@ -1,8 +1,9 @@
 
 #include "spdlog/spdlog.h"
 #include "spdlog/cfg/env.h"
-#include "grid_fluid_simulator_3d.h"
+#include "jos_stam_2d.h"
 
+#include <memory>
 #include <GLHelpers/GLHelpers.h>
 #include <common/common.h>
 #include <glfw_utils/window.h>
@@ -35,10 +36,25 @@ int main(int argc, char *argv[]) {
 
   /* ************************************************************************************************
    * **
+   * **   Make fluid sim
+   * **
+   * ************************************************************************************************/
+  const uint32_t GRID_SIZE = 35;
+  auto sim = std::make_shared<JosStam2D>(GRID_SIZE, 1.0f * GRID_SIZE);
+
+  // Set up a source and forces
+  std::vector<float> source((GRID_SIZE + 2) * (GRID_SIZE + 2), 0);
+  std::vector<float> forcex((GRID_SIZE + 2) * (GRID_SIZE + 2), 0);
+  std::vector<float> forcey((GRID_SIZE + 2) * (GRID_SIZE + 2), 0);
+  source.at((GRID_SIZE + 2) * ((GRID_SIZE + 2) / 2) + ((GRID_SIZE + 2) / 2)) = 100.0f;
+  forcex.at((GRID_SIZE + 2) * ((GRID_SIZE + 2) / 2) + ((GRID_SIZE + 2) / 2) - 2) = 3.0f;
+  forcey.at((GRID_SIZE + 2) * ((GRID_SIZE + 2) / 2) + ((GRID_SIZE + 2) / 2) - 2) = -1.0f;
+
+  /* ************************************************************************************************
+   * **
    * **   Make a quad to render
    * **
    * ************************************************************************************************/
-  // Setup GL stuff
   GLuint vao;
   glGenVertexArrays(1, &vao);
   glBindVertexArray(vao);
@@ -61,42 +77,20 @@ int main(int argc, char *argv[]) {
 
   /* ************************************************************************************************
    * **
-   * **   Make fluid sim
+   * **   Make a texture and some image data to hold the render
    * **
    * ************************************************************************************************/
-  const int GRID_WIDTH = 64;
-  const int GRID_HEIGHT = 64;
-  const int GRID_DEPTH = 3;
-  auto sim = std::make_shared<GridFluidSimulator3D>(GRID_WIDTH,
-                                                    GRID_HEIGHT,
-                                                    GRID_DEPTH,
-                                                    1.0f * GRID_WIDTH,
-                                                    1.0f * GRID_HEIGHT,
-                                                    1.0f * GRID_DEPTH,
-                                                    0.0f,
-                                                    0.0f,
-                                                    0.00001f);
-
-  // Set up a source
-  auto mid_idx = (GRID_WIDTH * GRID_HEIGHT * (GRID_DEPTH / 2)) + (GRID_WIDTH * (GRID_HEIGHT / 2)) + (GRID_WIDTH / 2);
-  std::vector<float> source(GRID_WIDTH * GRID_HEIGHT * GRID_DEPTH, 0);
-  std::vector<vec3f> force(GRID_WIDTH * GRID_HEIGHT * GRID_DEPTH, vec3f{0.0f, 0.0f, 0.0f});
-  source.at(mid_idx) = 10.0f;
-  force.at(mid_idx - (GRID_WIDTH / 4)) = {0.0f, 0.0001f, 0.0f};
+  auto texture = std::make_shared<Texture>(GRID_SIZE, GRID_SIZE);
+  std::vector<uint8_t> image_data(GRID_SIZE * GRID_SIZE * 3, 0);
 
   /* ************************************************************************************************
    * **
-   * **   Make a texture to hold the render
+   * **   Main render loop
    * **
    * ************************************************************************************************/
-  auto texture = std::make_shared<Texture>(GRID_WIDTH, GRID_HEIGHT);
-
-  // Allocate image data to which to render.
-  std::vector<uint8_t> image_data(GRID_WIDTH * GRID_HEIGHT * 3, 0);
-
   glm::mat4 r(1);
-//  r = glm::rotate_slow(r,(float)M_PI/2.0f, glm::vec3{0,0,1});
-//  g_arcball->SetRotation(r);
+  //  r = glm::rotate_slow(r,(float)M_PI/2.0f, glm::vec3{0,0,1});
+  //  g_arcball->SetRotation(r);
 
   auto timer = std::make_shared<FrameTimer>();
   while (!window.ShouldClose()) {
@@ -112,26 +106,27 @@ int main(int argc, char *argv[]) {
      * **   Render the fluid sim into the image data and load to texture
      * **
      * ************************************************************************************************/
-    auto data = sim->Density();
+    auto data = sim->dens_;
     image_data.clear();
-    // Planar offset for middle of sim
-    auto data_plane_size = GRID_WIDTH * GRID_HEIGHT;
-    auto mid_plane_offset = data_plane_size * (GRID_DEPTH / 2);
-
+    auto data_plane_size = (GRID_SIZE + 2) * (GRID_SIZE + 2);
     auto min_d = std::numeric_limits<float>::max();
     auto max_d = std::numeric_limits<float>::lowest();
     for (auto idx = 0; idx < data_plane_size; ++idx) {
-      auto d = data.at(idx + mid_plane_offset);
+      auto d = data[idx];
       if (d < min_d) min_d = d;
       if (d > max_d) max_d = d;
     }
     auto scale = 255.0f / (max_d - min_d);
-    for (auto idx = 0; idx < data_plane_size; ++idx) {
-      auto d = data.at(idx + mid_plane_offset);
-      auto v = (uint8_t) std::fminf(255.0f, (d - min_d) * scale);
-      image_data.push_back(v);
-      image_data.push_back(v);
-      image_data.push_back(v);
+    for (auto y = 1; y <= GRID_SIZE; ++y) {
+      for (auto x = 1; x <= GRID_SIZE; ++x) {
+        auto idx = y * (GRID_SIZE + 2) + x;
+        auto d = data[idx];
+//        auto v = (uint8_t) std::fminf(255.0f, (d - min_d) * scale);
+        auto v = (uint8_t) std::fminf(255.0f, std::floorf(d * 255.0f));
+        image_data.push_back(v);
+        image_data.push_back(v);
+        image_data.push_back(v);
+      }
     }
     texture->SetImageData(image_data.data());
 
@@ -159,7 +154,9 @@ int main(int argc, char *argv[]) {
      * **
      * ************************************************************************************************/
     auto elapsed = timer->ElapsedTime();
-    sim->Simulate(source, force, elapsed);
+    sim->simulate(elapsed,
+                  forcex.data(), forcey.data(),
+                  source.data(), 0.0, 0.5f);
 
     // End of frame
     window.SwapBuffers();

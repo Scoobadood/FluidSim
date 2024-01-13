@@ -126,15 +126,15 @@ float GridFluidSimulator3D::AdvectValue(const std::vector<float> &velocity_x,
   return final_val;
 }
 
-void GridFluidSimulator3D::Diffuse(const std::vector<float> &current_amount,
+void GridFluidSimulator3D::Diffuse(std::vector<float> &current_amount,
                                    float diffusion_rate, float delta_t,
-                                   bool is_velocity,
-                                   std::vector<float> &next_amount) {
+                                   bool is_velocity) {
 
   // Initialise next_amount with current values (though any value would do)
-  std::memcpy(next_amount.data(), current_amount.data(), total_cells_ * sizeof(float));
+  std::vector<float> diffused_content(total_cells_, 0);
+  std::memcpy(diffused_content.data(), current_amount.data(), total_cells_ * sizeof(float));
 
-  auto k = delta_t * diffusion_rate;// * cell_size_.x * cell_size_.y * cell_size_.z;
+  auto k = delta_t * diffusion_rate / (cell_size_.x * cell_size_.y * cell_size_.z);
   auto idx_dy = num_cells_.x;
   auto idx_dz = num_cells_.y * num_cells_.x;
   for (auto iter = 0; iter < NUM_GS_ITERS; ++iter) {
@@ -147,17 +147,18 @@ void GridFluidSimulator3D::Diffuse(const std::vector<float> &current_amount,
           auto new_val = (
               current_amount.at(idx) + k *
                   (
-                      next_amount.at(idx - 1) + next_amount.at(idx + 1) +
-                          next_amount.at(idx - idx_dy) + next_amount.at(idx + idx_dy) +
-                          next_amount.at(idx - idx_dz) + next_amount.at(idx + idx_dz)
+                      diffused_content.at(idx - 1) + diffused_content.at(idx + 1) +
+                          diffused_content.at(idx - idx_dy) + diffused_content.at(idx + idx_dy) +
+                          diffused_content.at(idx - idx_dz) + diffused_content.at(idx + idx_dz)
                   )
           ) / (1 + 6.0f * k);
-          next_amount.at(idx) = new_val;
+          diffused_content.at(idx) = new_val;
         }
       }
     }
-    SetBoundary(next_amount, is_velocity ? -1 : 1);
+    SetBoundary(diffused_content, is_velocity ? -1 : 1);
   }
+  std::memcpy(current_amount.data(), diffused_content.data(), sizeof(float) * total_cells_);
 }
 
 void GridFluidSimulator3D::SetBoundary(std::vector<float> &src, float scale) {
@@ -284,15 +285,9 @@ void GridFluidSimulator3D::AdvectVelocity(float delta_t) {
 }
 
 void GridFluidSimulator3D::DiffuseVelocity(float delta_t) {
-  std::vector<float> diffused_content(total_cells_);
-  Diffuse(velocity_x_, viscosity_, delta_t, true, diffused_content);
-  std::memcpy(velocity_x_.data(), diffused_content.data(), sizeof(float) * total_cells_);
-
-  Diffuse(velocity_y_, viscosity_, delta_t, true, diffused_content);
-  std::memcpy(velocity_y_.data(), diffused_content.data(), sizeof(float) * total_cells_);
-
-  Diffuse(velocity_z_, viscosity_, delta_t, true, diffused_content);
-  std::memcpy(velocity_z_.data(), diffused_content.data(), sizeof(float) * total_cells_);
+  Diffuse(velocity_x_, viscosity_, delta_t, true);
+  Diffuse(velocity_y_, viscosity_, delta_t, true);
+  Diffuse(velocity_z_, viscosity_, delta_t, true);
 }
 
 void GridFluidSimulator3D::Project() {
@@ -382,9 +377,7 @@ void GridFluidSimulator3D::AdvectScalar(float delta_t) {
 }
 
 void GridFluidSimulator3D::DiffuseScalar(float delta_t) {
-  std::vector<float> diffused_content(total_cells_, 0.0f);
-  Diffuse(content_, diffusion_rate_, delta_t, false, diffused_content);
-  std::memcpy(content_.data(), diffused_content.data(), total_cells_ * sizeof(float));
+  Diffuse(content_, diffusion_rate_, delta_t, false);
 }
 
 void GridFluidSimulator3D::Dissipate(float delta_t) {

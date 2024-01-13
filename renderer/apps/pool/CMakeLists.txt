@@ -16,5 +16,4 @@ target_link_libraries(pool
         glfw
         GLHelpers
         common
-        GLEW::GLEW
 )

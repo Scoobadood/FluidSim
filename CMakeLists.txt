@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(FluidSim VERSION 0.1 LANGUAGES CXX)
+project(FluidSim VERSION 0.1 LANGUAGES CXX C)
 
 
 list(APPEND CMAKE_PREFIX_PATH "/Users/dave/Qt/6.6.0/macos")

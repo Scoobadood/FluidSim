@@ -26,22 +26,6 @@ FetchContent_Declare(
         GIT_PROGRESS TRUE
 )
 
-
-if(NOT APPLE)
-    # FreeGLUT
-    add_definitions(-DGL_SILENCE_DEPRECATION)
-    FetchContent_Declare(
-            freeglut
-            GIT_REPOSITORY https://github.com/FreeGLUTProject/freeglut
-            GIT_TAG v3.4.0
-            GIT_PROGRESS TRUE
-    )
-    FetchContent_MakeAvailable(freeglut)
-ENDIF(NOT APPLE)
-
-#GLEW
-find_package(GLEW REQUIRED)
-
 # STB For Image libs
 FetchContent_Declare(
         stb
